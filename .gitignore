@@ -45,3 +45,6 @@ example
 # piani/spec (non tracciati) e workspace di esecuzione
 docs/superpowers/
 .superpowers/
+
+# APK generati
+*.apk

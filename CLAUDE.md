@@ -31,13 +31,19 @@ docs/superpowers/   spec e piano (NON tracciati, in .gitignore)
 **Build APK (locale, niente EAS):**
 ```bash
 npx expo prebuild --platform android      # rigenera android/ da app.json (dopo modifiche a plugin/permessi)
+echo "cmake.dir=C:/Users/samue/AppData/Local/Android/Sdk/cmake/3.31.6" >> android/local.properties   # da rifare dopo ogni prebuild --clean
 cd android && JAVA_HOME="/c/Program Files/Java/jdk-21" ./gradlew assembleRelease
 # → android/app/build/outputs/apk/release/app-release.apk (firmata con la debug keystore: ok per sideload)
+# copia di comodo: Fisioterapia-<versione>.apk nella root (*.apk è git-ignorato)
 ```
-Gotcha: `JAVA_HOME` di sistema punta a jdk-20, usare jdk-21. Nessun emulatore installato: si prova sul telefono (`adb install -r <apk>` o copiando l'APK).
+Gotcha:
+- `JAVA_HOME` di sistema punta a jdk-20, usare jdk-21.
+- **Percorsi > 260 caratteri:** le librerie native (C++) generano percorsi lunghissimi. Serve `LongPathsEnabled=1` nel registro (attivato da Samu il 2026-11-20) **e** CMake 3.31.6 (ninja 1.12, gestisce i percorsi lunghi) tramite `cmake.dir` in `android/local.properties`. La CMake 3.22.1 di default dell'SDK fallisce.
+- `react-native.config.js` esclude da Android worklets/reanimated/gesture-handler (dipendenze transitive non usate).
+- Prima build ~17 min, poi incrementale. Nessun emulatore installato: si prova sul telefono (`adb install -r <apk>` o copiando l'APK).
 
 **Scelte non ovvie:**
 - Notifica di fine con `delivery: 'alarmClock'` + permessi `USE_EXACT_ALARM`/`SCHEDULE_EXACT_ALARM`: Android non la rimanda (tutore da 1 ora). Va tolto `USE_EXACT_ALARM` se mai si pubblica sul Play Store.
 - Il timer si calcola da timestamp (`src/timer.ts`); la sessione attiva è salvata, e Home/Timer chiudono quella scaduta ad app chiusa (`src/sessione.ts`).
 
-**Stato:** v1 completa (tutte le schermate, 43 test). Da fare: collaudo sul telefono di Samu (prove a mano dei Task 7-8 del piano + notifica del tutore a schermo spento).
+**Stato (2026-11-20):** v1 completa, 47 test, revisione finale fatta e correzioni applicate, APK 1.0.0 generato. Da fare: collaudo sul telefono di Samu (prove a mano dei Task 7-8 del piano + notifica del tutore a schermo spento). Rimandati (minori): avviso "senza notifica" non ricompare rientrando nel timer; primo beep forse in ritardo (player creati al primo uso); se la scrittura dello storico fallisce non si ritenta.
