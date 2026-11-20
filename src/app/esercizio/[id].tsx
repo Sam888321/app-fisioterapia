@@ -2,7 +2,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useHeaderHeight } from 'expo-router/react-navigation';
+import { Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caricaEsercizi, copiaFoto, eliminaEsercizio, nuovoId, salvaEsercizio } from '../../archivio';
 import { ICONE } from '../../icone';
@@ -14,6 +15,7 @@ export default function ModificaEsercizio() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const nuovo = id === 'nuovo';
   const insets = useSafeAreaInsets();
+  const altezzaHeader = useHeaderHeight();
   const [originale, setOriginale] = useState<Esercizio | null>(null);
   const [nome, setNome] = useState('');
   const [immagine, setImmagine] = useState<Immagine>({ tipo: 'icona', nome: ICONE[0] });
@@ -73,55 +75,58 @@ export default function ModificaEsercizio() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colori.sfondo }} contentContainerStyle={[s.contenuto, { paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled">
-      <Stack.Screen options={{ title: nuovo ? 'Nuovo esercizio' : 'Modifica esercizio' }} />
+    // Edge-to-edge: Android non ridimensiona più la finestra per la tastiera, ci pensa il KeyboardAvoidingView.
+    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={altezzaHeader} style={{ flex: 1, backgroundColor: colori.sfondo }}>
+      <ScrollView style={{ backgroundColor: colori.sfondo }} contentContainerStyle={[s.contenuto, { paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled">
+        <Stack.Screen options={{ title: nuovo ? 'Nuovo esercizio' : 'Modifica esercizio' }} />
 
-      <Text style={s.etichetta}>Nome</Text>
-      <TextInput style={s.input} value={nome} onChangeText={setNome} placeholder="Es. Flessione dito" />
+        <Text style={s.etichetta}>Nome</Text>
+        <TextInput style={s.input} value={nome} onChangeText={setNome} placeholder="Es. Flessione dito" />
 
-      <Text style={s.etichetta}>Immagine</Text>
-      <View style={s.riga}>
-        <ImmagineEsercizio immagine={immagine} size={88} />
-        <View style={{ gap: 8, flex: 1 }}>
-          <Bottone testo="Scatta foto" icona="camera" onPress={() => prendiFoto(true)} />
-          <Bottone testo="Galleria" icona="image" onPress={() => prendiFoto(false)} />
+        <Text style={s.etichetta}>Immagine</Text>
+        <View style={s.riga}>
+          <ImmagineEsercizio immagine={immagine} size={88} />
+          <View style={{ gap: 8, flex: 1 }}>
+            <Bottone testo="Scatta foto" icona="camera" onPress={() => prendiFoto(true)} />
+            <Bottone testo="Galleria" icona="image" onPress={() => prendiFoto(false)} />
+          </View>
         </View>
-      </View>
-      <View style={s.icone}>
-        {ICONE.map((n) => (
-          <Pressable key={n} onPress={() => setImmagine({ tipo: 'icona', nome: n })} accessibilityLabel={`Icona ${n}`}
-            style={[s.icona, immagine.tipo === 'icona' && immagine.nome === n && s.iconaScelta]}>
-            <MaterialCommunityIcons name={n as keyof typeof MaterialCommunityIcons.glyphMap} size={30} color={colori.accento} />
-          </Pressable>
-        ))}
-      </View>
+        <View style={s.icone}>
+          {ICONE.map((n) => (
+            <Pressable key={n} onPress={() => setImmagine({ tipo: 'icona', nome: n })} accessibilityLabel={`Icona ${n}`}
+              style={[s.icona, immagine.tipo === 'icona' && immagine.nome === n && s.iconaScelta]}>
+              <MaterialCommunityIcons name={n as keyof typeof MaterialCommunityIcons.glyphMap} size={30} color={colori.accento} />
+            </Pressable>
+          ))}
+        </View>
 
-      <Text style={s.etichetta}>Ripetizioni</Text>
-      <TextInput style={s.input} value={ripetizioni} onChangeText={setRipetizioni} keyboardType="number-pad" />
+        <Text style={s.etichetta}>Ripetizioni</Text>
+        <TextInput style={s.input} value={ripetizioni} onChangeText={setRipetizioni} keyboardType="number-pad" />
 
-      <Text style={s.etichetta}>Tenuta</Text>
-      <View style={s.riga}>
-        <TextInput style={[s.input, { flex: 1 }]} value={tenuta} onChangeText={setTenuta} keyboardType="number-pad" />
-        {(['s', 'min'] as const).map((u) => (
-          <Pressable key={u} onPress={() => setUnita(u)} style={[s.unita, unita === u && s.unitaScelta]}>
-            <Text style={[s.unitaTesto, unita === u && { color: '#fff' }]}>{u === 's' ? 'sec' : 'min'}</Text>
-          </Pressable>
-        ))}
-      </View>
+        <Text style={s.etichetta}>Tenuta</Text>
+        <View style={s.riga}>
+          <TextInput style={[s.input, { flex: 1 }]} value={tenuta} onChangeText={setTenuta} keyboardType="number-pad" />
+          {(['s', 'min'] as const).map((u) => (
+            <Pressable key={u} onPress={() => setUnita(u)} style={[s.unita, unita === u && s.unitaScelta]}>
+              <Text style={[s.unitaTesto, unita === u && { color: '#fff' }]}>{u === 's' ? 'sec' : 'min'}</Text>
+            </Pressable>
+          ))}
+        </View>
 
-      <Text style={s.etichetta}>Volte al giorno (facoltativo)</Text>
-      <TextInput style={s.input} value={volte} onChangeText={setVolte} keyboardType="number-pad" placeholder="—" />
+        <Text style={s.etichetta}>Volte al giorno (facoltativo)</Text>
+        <TextInput style={s.input} value={volte} onChangeText={setVolte} keyboardType="number-pad" placeholder="—" />
 
-      {errore && <Text style={s.errore}>{errore}</Text>}
-      <Pressable style={[s.salva, errore && { opacity: 0.4 }]} disabled={!!errore} onPress={salva}>
-        <Text style={s.salvaTesto}>Salva</Text>
-      </Pressable>
-      {originale && (
-        <Pressable style={s.elimina} onPress={elimina}>
-          <Text style={{ color: colori.rosso, fontSize: 16, fontWeight: '600' }}>Elimina esercizio</Text>
+        {errore && <Text style={s.errore}>{errore}</Text>}
+        <Pressable style={[s.salva, errore && { opacity: 0.4 }]} disabled={!!errore} onPress={salva}>
+          <Text style={s.salvaTesto}>Salva</Text>
         </Pressable>
-      )}
-    </ScrollView>
+        {originale && (
+          <Pressable style={s.elimina} onPress={elimina}>
+            <Text style={{ color: colori.rosso, fontSize: 16, fontWeight: '600' }}>Elimina esercizio</Text>
+          </Pressable>
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
