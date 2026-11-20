@@ -32,7 +32,7 @@ docs/superpowers/   spec e piano (NON tracciati, in .gitignore)
 **Build APK (locale, niente EAS):**
 ```bash
 npx expo prebuild --platform android      # rigenera android/ da app.json (dopo modifiche a plugin/permessi)
-echo "cmake.dir=C:/Users/samue/AppData/Local/Android/Sdk/cmake/3.31.6" >> android/local.properties   # da rifare dopo ogni prebuild --clean
+echo "cmake.dir=C:/Users/samue/AppData/Local/Android/Sdk/cmake/3.31.6" >> android/local.properties   # da rifare dopo OGNI prebuild (lo cancella)
 cd android && JAVA_HOME="/c/Program Files/Java/jdk-21" ./gradlew assembleRelease
 # → android/app/build/outputs/apk/release/app-release.apk (firmata con la debug keystore: ok per sideload)
 # copia di comodo: Fisioterapia-<versione>.apk nella root (*.apk è git-ignorato)
@@ -47,4 +47,4 @@ Gotcha:
 - Notifica di fine con `delivery: 'alarmClock'` + permessi `USE_EXACT_ALARM`/`SCHEDULE_EXACT_ALARM`: Android non la rimanda (tutore da 1 ora). Va tolto `USE_EXACT_ALARM` se mai si pubblica sul Play Store.
 - Il timer si calcola da timestamp (`src/timer.ts`); la sessione attiva è salvata, e Home/Timer chiudono quella scaduta ad app chiusa (`src/sessione.ts`).
 
-**Stato (2026-11-20):** v1 completa, 47 test, revisione finale fatta e correzioni applicate, APK 1.0.0 generato. Da fare: collaudo sul telefono di Samu (prove a mano dei Task 7-8 del piano + notifica del tutore a schermo spento). Rimandati (minori): avviso "senza notifica" non ricompare rientrando nel timer; primo beep forse in ritardo (player creati al primo uso); se la scrittura dello storico fallisce non si ritenta.
+**Stato (2026-11-20):** v1 completa, 47 test, revisione finale fatta e correzioni applicate, APK 1.1.0 generato (tema scuro, griglia, insets, icona). Da fare: collaudo sul telefono di Samu (prove a mano dei Task 7-8 del piano + notifica del tutore a schermo spento). Rimandati (minori): avviso "senza notifica" non ricompare rientrando nel timer; primo beep forse in ritardo (player creati al primo uso); se la scrittura dello storico fallisce non si ritenta.
