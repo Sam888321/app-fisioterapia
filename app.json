@@ -45,7 +45,8 @@
         {
           "cameraPermission": "Serve per fotografare gli esercizi"
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
