@@ -1,7 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caricaEsercizi, salvaAttiva, SessioneAttiva } from '../../archivio';
 import { formatTempo, sottotitolo } from '../../formato';
@@ -24,6 +24,7 @@ export default function Timer() {
   const [att, setAtt] = useState<SessioneAttiva | null>(null); // null = pronto a partire
   const [altra, setAltra] = useState<string | null>(null); // nome di un altro esercizio già in corso
   const [senzaNotifica, setSenzaNotifica] = useState(false);
+  const [anteprima, setAnteprima] = useState(false);
   const insets = useSafeAreaInsets();
   const [ora, setOra] = useState(() => Date.now());
   const attRef = useRef<SessioneAttiva | null>(null);
@@ -142,7 +143,9 @@ export default function Timer() {
       {(stato?.fase === 'preparazione' || stato?.fase === 'tenuta') && <TieniAcceso />}
 
       <View style={[s.centro, { flex: 1 }]}>
-        <ImmagineEsercizio immagine={es.immagine} size={stato ? 96 : 140} />
+        <Pressable onPress={() => setAnteprima(true)} disabled={es.immagine.tipo !== 'foto'} accessibilityLabel="Ingrandisci foto">
+          <ImmagineEsercizio immagine={es.immagine} size={stato ? 96 : 140} />
+        </Pressable>
 
         {!stato && (
           <>
@@ -181,6 +184,14 @@ export default function Timer() {
           <Text style={s.avviso}>Senza permesso niente notifica ad app chiusa</Text>
         )}
       </View>
+
+      {es.immagine.tipo === 'foto' && (
+        <Modal visible={anteprima} transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => setAnteprima(false)}>
+          <Pressable style={s.anteprima} onPress={() => setAnteprima(false)} accessibilityLabel="Chiudi foto">
+            <Image source={{ uri: es.immagine.uri }} style={s.foto} resizeMode="contain" />
+          </Pressable>
+        </Modal>
+      )}
 
       <View style={[s.comandi, { paddingBottom: insets.bottom + 20 }]}>
         {!stato &&
@@ -230,4 +241,6 @@ const s = StyleSheet.create({
   comandi: { padding: 20, gap: 12, paddingBottom: 36 },
   grande: { borderRadius: 16, paddingVertical: 20, alignItems: 'center' },
   grandeTesto: { fontSize: 22, fontWeight: '700' },
+  anteprima: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', padding: 16 },
+  foto: { width: '100%', height: '100%' },
 });
