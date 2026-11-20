@@ -8,7 +8,7 @@ import { formatTempo, sottotitolo } from '../../formato';
 import { esclusivo } from '../../esclusivo';
 import { annullaNotifica, chiediPermesso, impostaTimerAperto, programmaFine } from '../../notifiche';
 import { concludiSessione, sistemaAttiva } from '../../sessione';
-import { suona } from '../../suoni';
+import { precaricaSuoni, suona } from '../../suoni';
 import { avanza, avvia, fineEsercizio, pausa, restanteMs, riprendi, ripetizioniFatte, StatoTimer } from '../../timer';
 import { Esercizio } from '../../tipi';
 import { colori, ImmagineEsercizio } from '../../ui';
@@ -32,6 +32,7 @@ export default function Timer() {
 
   useEffect(() => {
     impostaTimerAperto(true);
+    precaricaSuoni();
     return () => impostaTimerAperto(false);
   }, []);
 
@@ -66,11 +67,17 @@ export default function Timer() {
       }
       for (const ev of eventi) suona(ev === 'fine' ? 'fine' : 'cambio');
       setOra(Date.now());
+      // Il tick da 200 ms farebbe suonare fino a 0,2 s dopo lo scatto: un timeout esatto sulla fine della fase.
+      clearTimeout(scatto);
+      const st = attRef.current?.stato;
+      if (st && 'fineFase' in st) scatto = setTimeout(passo, Math.max(0, st.fineFase - Date.now()));
     };
+    let scatto: ReturnType<typeof setTimeout> | undefined;
     const t = setInterval(passo, 200);
     const sub = AppState.addEventListener('change', (st) => st === 'active' && passo());
     return () => {
       clearInterval(t);
+      clearTimeout(scatto);
       sub.remove();
     };
   }, [es]);
