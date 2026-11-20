@@ -2,7 +2,7 @@ jest.mock('@react-native-async-storage/async-storage', () => require('@react-nat
 jest.mock('expo-file-system', () => ({}));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { aggiungiSessione, caricaAttiva, caricaEsercizi, caricaSessioni, eliminaEsercizio, nuovoId, salvaAttiva, salvaEsercizio } from '../src/archivio';
+import { aggiungiSessione, caricaAnticipo, caricaAttiva, caricaEsercizi, caricaSessioni, eliminaEsercizio, nuovoId, salvaAnticipo, salvaAttiva, salvaEsercizio } from '../src/archivio';
 import { validaEsercizio } from '../src/tipi';
 
 beforeEach(() => AsyncStorage.clear());
@@ -62,4 +62,10 @@ test('validaEsercizio', () => {
   expect(validaEsercizio({ ...ok, tenuta: 'abc' })).toBe('Tenuta: almeno 1');
   expect(validaEsercizio({ ...ok, tenuta: '2.5' })).toBe('Tenuta: almeno 1');
   expect(validaEsercizio({ ...ok, voltePerGiorno: '0' })).toBe('Volte al giorno: almeno 1 o vuoto');
+});
+
+test('anticipo beep: 110 ms se mai impostato, poi quello salvato', async () => {
+  expect(await caricaAnticipo()).toBe(110);
+  await salvaAnticipo(80);
+  expect(await caricaAnticipo()).toBe(80);
 });

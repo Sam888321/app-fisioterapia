@@ -37,9 +37,14 @@ export default function Home() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable onPress={() => router.push('/storico')} hitSlop={12} accessibilityLabel="Storico">
-              <MaterialCommunityIcons name="history" size={28} color={colori.accento} />
-            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 20 }}>
+              <Pressable onPress={() => router.push('/storico')} hitSlop={12} accessibilityLabel="Storico">
+                <MaterialCommunityIcons name="history" size={28} color={colori.accento} />
+              </Pressable>
+              <Pressable onPress={() => router.push('/impostazioni')} hitSlop={12} accessibilityLabel="Impostazioni">
+                <MaterialCommunityIcons name="cog-outline" size={28} color={colori.accento} />
+              </Pressable>
+            </View>
           ),
         }}
       />

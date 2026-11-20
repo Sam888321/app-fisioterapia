@@ -63,6 +63,15 @@ export async function salvaAttiva(a: SessioneAttiva | null): Promise<void> {
   else await scrivi('attiva', a);
 }
 
+// Di quanti ms il beep precede lo scatto: compensa il ritardo audio, si regola dalle Impostazioni.
+export async function caricaAnticipo(): Promise<number> {
+  return (await leggi<number>('anticipoBeep')) ?? 110;
+}
+
+export async function salvaAnticipo(ms: number): Promise<void> {
+  await scrivi('anticipoBeep', ms);
+}
+
 // Copia la foto nella cartella dell'app: resta anche se viene cancellata dalla galleria.
 export async function copiaFoto(uriTemporaneo: string): Promise<string> {
   const dir = new Directory(Paths.document, 'foto');

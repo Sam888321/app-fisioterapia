@@ -3,13 +3,13 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, AppState, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { caricaEsercizi, salvaAttiva, SessioneAttiva } from '../../archivio';
+import { caricaAnticipo, caricaEsercizi, salvaAttiva, SessioneAttiva } from '../../archivio';
 import { formatTempo, sottotitolo } from '../../formato';
 import { esclusivo } from '../../esclusivo';
 import { annullaNotifica, chiediPermesso, impostaTimerAperto, programmaFine } from '../../notifiche';
 import { concludiSessione, sistemaAttiva } from '../../sessione';
 import { precaricaSuoni, suona } from '../../suoni';
-import { avanza, avvia, fineEsercizio, pausa, restanteMs, riprendi, ripetizioniFatte, StatoTimer } from '../../timer';
+import { avanza, avvia, Evento, fineEsercizio, pausa, restanteMs, riprendi, ripetizioniFatte, StatoTimer } from '../../timer';
 import { Esercizio } from '../../tipi';
 import { colori, ImmagineEsercizio } from '../../ui';
 
@@ -29,10 +29,12 @@ export default function Timer() {
   const [ora, setOra] = useState(() => Date.now());
   const attRef = useRef<SessioneAttiva | null>(null);
   const occupato = useRef(false);
+  const anticipoMs = useRef(110);
 
   useEffect(() => {
     impostaTimerAperto(true);
     precaricaSuoni();
+    caricaAnticipo().then((v) => (anticipoMs.current = v));
     return () => impostaTimerAperto(false);
   }, []);
 
@@ -55,29 +57,47 @@ export default function Timer() {
   // Il tempo si ricalcola dai timestamp: il tick serve solo a ridisegnare e a emettere i suoni.
   useEffect(() => {
     if (!es) return;
+    const tenuta = es.tenutaSecondi * 1000;
+    const riposo = (es.riposoSecondi ?? 0) * 1000;
+    // Il beep parte anticipoMs prima dello scatto (l'audio Android arriva in ritardo); suonatoPer evita il doppio beep.
+    let suonatoPer = 0;
+    const beep = (eventi: Evento[], fine: number) => {
+      if (suonatoPer === fine) return;
+      suonatoPer = fine;
+      for (const ev of eventi) suona(ev === 'fine' ? 'fine' : 'cambio');
+    };
     const passo = () => {
       const a = attRef.current;
       if (!a) return;
-      const { stato, eventi } = avanza(a.stato, es.ripetizioni, es.tenutaSecondi * 1000, Date.now(), (es.riposoSecondi ?? 0) * 1000);
+      const { stato, eventi } = avanza(a.stato, es.ripetizioni, tenuta, Date.now(), riposo);
       if (stato !== a.stato) {
+        if ('fineFase' in a.stato) beep(eventi, a.stato.fineFase); // se l'anticipo non è partito (app in background)
         const n = { ...a, stato };
         aggiorna(n);
         if (stato.fase === 'finito') concludiSessione(a, es, 'completato', es.ripetizioni);
         else salvaAttiva(n);
       }
-      for (const ev of eventi) suona(ev === 'fine' ? 'fine' : 'cambio');
       setOra(Date.now());
-      // Il tick da 200 ms farebbe suonare fino a 0,2 s dopo lo scatto: un timeout esatto sulla fine della fase.
+      // Timeout esatti: il tick da 200 ms sarebbe in ritardo fino a 0,2 s.
       clearTimeout(scatto);
+      clearTimeout(anticipo);
       const st = attRef.current?.stato;
-      if (st && 'fineFase' in st) scatto = setTimeout(passo, Math.max(0, st.fineFase - Date.now()));
+      if (st && 'fineFase' in st) {
+        const fine = st.fineFase;
+        scatto = setTimeout(passo, Math.max(0, fine - Date.now()));
+        anticipo = setTimeout(() => {
+          if (attRef.current?.stato === st) beep(avanza(st, es.ripetizioni, tenuta, fine, riposo).eventi, fine); // non se nel frattempo è in pausa
+        }, Math.max(0, fine - anticipoMs.current - Date.now()));
+      }
     };
     let scatto: ReturnType<typeof setTimeout> | undefined;
+    let anticipo: ReturnType<typeof setTimeout> | undefined;
     const t = setInterval(passo, 200);
     const sub = AppState.addEventListener('change', (st) => st === 'active' && passo());
     return () => {
       clearInterval(t);
       clearTimeout(scatto);
+      clearTimeout(anticipo);
       sub.remove();
     };
   }, [es]);
