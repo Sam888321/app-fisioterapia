@@ -1,0 +1,20 @@
+import { formatTempo, sottotitolo } from '../src/formato';
+
+test('formatTempo: secondi per eccesso sotto il minuto', () => {
+  expect(formatTempo(4001)).toBe('5');
+  expect(formatTempo(5000)).toBe('5');
+  expect(formatTempo(0)).toBe('0');
+});
+
+test('formatTempo: mm:ss e h:mm:ss', () => {
+  expect(formatTempo(60_000)).toBe('01:00');
+  expect(formatTempo(65_000)).toBe('01:05');
+  expect(formatTempo(3_599_001)).toBe('1:00:00');
+  expect(formatTempo(3_725_000)).toBe('1:02:05');
+});
+
+test('sottotitolo esercizio', () => {
+  expect(sottotitolo(10, 5)).toBe('10 × 5 s');
+  expect(sottotitolo(1, 3600)).toBe('1 × 60 min');
+  expect(sottotitolo(3, 90)).toBe('3 × 90 s');
+});
