@@ -82,3 +82,48 @@ test('ripetizioniFatte', () => {
   expect(ripetizioniFatte({ fase: 'pausa', ripetizione: 4, restanteMs: 1, faseSospesa: 'tenuta' }, R)).toBe(3);
   expect(ripetizioniFatte({ fase: 'finito', ripetizione: 10 }, R)).toBe(10);
 });
+
+describe('riposo tra le ripetizioni', () => {
+  const P = 2000; // riposo
+
+  test('fine tenuta (non ultima) apre il riposo prima della ripetizione successiva', () => {
+    const r = avanza({ fase: 'tenuta', ripetizione: 1, fineFase: t0 }, R, T, t0, P);
+    expect(r.stato).toEqual({ fase: 'riposo', ripetizione: 2, fineFase: t0 + 2000 });
+    expect(r.eventi).toEqual(['cambio']);
+  });
+
+  test('fine riposo riapre la tenuta con un via', () => {
+    const r = avanza({ fase: 'riposo', ripetizione: 2, fineFase: t0 }, R, T, t0, P);
+    expect(r.stato).toEqual({ fase: 'tenuta', ripetizione: 2, fineFase: t0 + 5000 });
+    expect(r.eventi).toEqual(['via']);
+  });
+
+  test("dopo l'ultima ripetizione niente riposo", () => {
+    const r = avanza({ fase: 'tenuta', ripetizione: 10, fineFase: t0 }, R, T, t0, P);
+    expect(r.stato).toEqual({ fase: 'finito', ripetizione: 10 });
+    expect(r.eventi).toEqual(['fine']);
+  });
+
+  test('un salto lungo conta anche i riposi', () => {
+    // da fine tenuta 1: riposo fino a +2000, tenuta 2 fino a +7000, riposo fino a +9000, tenuta 3 fino a +14000
+    const r = avanza({ fase: 'tenuta', ripetizione: 1, fineFase: t0 }, R, T, t0 + 10_000, P);
+    expect(r.stato).toEqual({ fase: 'tenuta', ripetizione: 3, fineFase: t0 + 14_000 });
+    expect(r.eventi).toEqual(['cambio']);
+  });
+
+  test('pausa e ripresa durante il riposo', () => {
+    const p = pausa({ fase: 'riposo', ripetizione: 4, fineFase: t0 + 1500 }, t0);
+    expect(p).toEqual({ fase: 'pausa', ripetizione: 4, restanteMs: 1500, faseSospesa: 'riposo' });
+    expect(riprendi(p, T, t0, false, P)).toEqual({ fase: 'riposo', ripetizione: 4, fineFase: t0 + 1500 });
+    expect(riprendi(p, T, t0, true, P)).toEqual({ fase: 'riposo', ripetizione: 4, fineFase: t0 + 2000 });
+  });
+
+  test('fineEsercizio include i riposi (non dopo l\'ultima)', () => {
+    expect(fineEsercizio(avvia(t0), R, T, P)).toBe(t0 + 3000 + 10 * 5000 + 9 * 2000);
+    expect(fineEsercizio({ fase: 'tenuta', ripetizione: 9, fineFase: t0 }, R, T, P)).toBe(t0 + 2000 + 5000);
+    expect(fineEsercizio({ fase: 'riposo', ripetizione: 10, fineFase: t0 }, R, T, P)).toBe(t0 + 5000);
+  });
+
+  test('ripetizioniFatte durante il riposo conta quelle concluse', () =>
+    expect(ripetizioniFatte({ fase: 'riposo', ripetizione: 4, fineFase: t0 }, R)).toBe(3));
+});

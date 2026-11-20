@@ -57,3 +57,11 @@ test('attiva di un esercizio eliminato viene scartata', async () => {
 test('nessuna attiva', async () => {
   expect(await sistemaAttiva([tutore], ora)).toBeNull();
 });
+
+test('i riposi allungano la sessione: non va chiusa prima del tempo', async () => {
+  const es: Esercizio = { ...tutore, ripetizioni: 3, tenutaSecondi: 5, riposoSecondi: 10 };
+  // tenuta 1 finita ora: restano riposo, tenuta 2, riposo, tenuta 3 = 30 s
+  const a: SessioneAttiva = { esercizioId: 'B', inizio: 'con-riposo', stato: { fase: 'tenuta', ripetizione: 1, fineFase: ora }, notificaId: null };
+  await salvaAttiva(a);
+  expect(await sistemaAttiva([es], ora + 15_000)).toEqual(a);
+});

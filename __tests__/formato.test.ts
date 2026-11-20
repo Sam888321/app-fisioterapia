@@ -18,3 +18,8 @@ test('sottotitolo esercizio', () => {
   expect(sottotitolo(1, 3600)).toBe('1 × 60 min');
   expect(sottotitolo(3, 90)).toBe('3 × 90 s');
 });
+
+test('sottotitolo con riposo', () => {
+  expect(sottotitolo(10, 5, 3)).toBe('10 × 5 s · riposo 3 s');
+  expect(sottotitolo(10, 5, 0)).toBe('10 × 5 s');
+});

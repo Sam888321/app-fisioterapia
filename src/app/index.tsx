@@ -59,7 +59,7 @@ export default function Home() {
           <Pressable style={({ pressed }) => [s.card, pressed && { opacity: 0.7 }]} onPress={() => apriTimer(item.id)}>
             <ImmagineEsercizio immagine={item.immagine} size={96} />
             <Text style={s.nome} numberOfLines={2}>{item.nome}</Text>
-            <Text style={s.sotto}>{sottotitolo(item.ripetizioni, item.tenutaSecondi)}</Text>
+            <Text style={s.sotto}>{sottotitolo(item.ripetizioni, item.tenutaSecondi, item.riposoSecondi)}</Text>
             <Pressable
               style={s.modifica}
               onPress={() => router.push({ pathname: '/esercizio/[id]', params: { id: item.id } })}

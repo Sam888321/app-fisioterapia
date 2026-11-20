@@ -57,7 +57,7 @@ export default function Timer() {
     const passo = () => {
       const a = attRef.current;
       if (!a) return;
-      const { stato, eventi } = avanza(a.stato, es.ripetizioni, es.tenutaSecondi * 1000, Date.now());
+      const { stato, eventi } = avanza(a.stato, es.ripetizioni, es.tenutaSecondi * 1000, Date.now(), (es.riposoSecondi ?? 0) * 1000);
       if (stato !== a.stato) {
         const n = { ...a, stato };
         aggiorna(n);
@@ -85,6 +85,7 @@ export default function Timer() {
   }
 
   const tenutaMs = es.tenutaSecondi * 1000;
+  const riposoMs = (es.riposoSecondi ?? 0) * 1000;
   const stato: StatoTimer | null = att?.stato ?? null;
 
   const inizia = () =>
@@ -92,7 +93,7 @@ export default function Timer() {
       if (!es || attRef.current) return;
       setSenzaNotifica(!(await chiediPermesso()));
       const st = avvia(Date.now());
-      const notificaId = await programmaFine(fineEsercizio(st, es.ripetizioni, tenutaMs)!, es.nome);
+      const notificaId = await programmaFine(fineEsercizio(st, es.ripetizioni, tenutaMs, riposoMs)!, es.nome);
       const n: SessioneAttiva = { esercizioId: es.id, inizio: new Date().toISOString(), stato: st, notificaId };
       aggiorna(n);
       await salvaAttiva(n);
@@ -111,8 +112,8 @@ export default function Timer() {
     esclusivo(occupato, async () => {
       const a = attRef.current;
       if (!a || !es || a.stato.fase !== 'pausa') return;
-      const st = riprendi(a.stato, tenutaMs, Date.now(), ricomincia);
-      const notificaId = await programmaFine(fineEsercizio(st, es.ripetizioni, tenutaMs)!, es.nome);
+      const st = riprendi(a.stato, tenutaMs, Date.now(), ricomincia, riposoMs);
+      const notificaId = await programmaFine(fineEsercizio(st, es.ripetizioni, tenutaMs, riposoMs)!, es.nome);
       const n = { ...a, stato: st, notificaId };
       aggiorna(n);
       await salvaAttiva(n);
@@ -140,7 +141,7 @@ export default function Timer() {
   return (
     <View style={s.schermo}>
       <Stack.Screen options={{ title: es.nome }} />
-      {(stato?.fase === 'preparazione' || stato?.fase === 'tenuta') && <TieniAcceso />}
+      {(stato?.fase === 'preparazione' || stato?.fase === 'tenuta' || stato?.fase === 'riposo') && <TieniAcceso />}
 
       <View style={[s.centro, { flex: 1 }]}>
         <Pressable onPress={() => setAnteprima(true)} disabled={es.immagine.tipo !== 'foto'} accessibilityLabel="Ingrandisci foto">
@@ -150,7 +151,7 @@ export default function Timer() {
         {!stato && (
           <>
             <Text style={s.titolo}>{es.nome}</Text>
-            <Text style={s.sotto}>{sottotitolo(es.ripetizioni, es.tenutaSecondi)}</Text>
+            <Text style={s.sotto}>{sottotitolo(es.ripetizioni, es.tenutaSecondi, es.riposoSecondi)}</Text>
             <Text style={s.contatore}>{contatore(0)}</Text>
             <Text style={s.tempo}>{formatTempo(tenutaMs)}</Text>
           </>
@@ -167,6 +168,13 @@ export default function Timer() {
             <Text style={s.tempo}>{formatTempo(restanteMs(stato, ora))}</Text>
           </>
         )}
+        {stato?.fase === 'riposo' && (
+          <>
+            <Text style={s.contatore}>Riposo</Text>
+            <Text style={[s.tempo, { color: colori.tenue }]}>{formatTempo(restanteMs(stato, ora))}</Text>
+            <Text style={s.sotto}>poi {contatore(stato.ripetizione).toLowerCase()}</Text>
+          </>
+        )}
         {stato?.fase === 'pausa' && (
           <>
             <Text style={s.contatore}>Pausa — {contatore(stato.ripetizione).toLowerCase()}</Text>
@@ -177,7 +185,7 @@ export default function Timer() {
         {stato?.fase === 'finito' && (
           <>
             <Text style={s.fatto}>Fatto!</Text>
-            <Text style={s.sotto}>{sottotitolo(es.ripetizioni, es.tenutaSecondi)} completato</Text>
+            <Text style={s.sotto}>{sottotitolo(es.ripetizioni, es.tenutaSecondi, es.riposoSecondi)} completato</Text>
           </>
         )}
         {senzaNotifica && stato && stato.fase !== 'finito' && (
@@ -200,7 +208,7 @@ export default function Timer() {
           ) : (
             <Grande testo="Avvia" onPress={inizia} />
           ))}
-        {(stato?.fase === 'preparazione' || stato?.fase === 'tenuta') && (
+        {(stato?.fase === 'preparazione' || stato?.fase === 'tenuta' || stato?.fase === 'riposo') && (
           <>
             <Grande testo="Pausa" onPress={metteInPausa} />
             <Grande testo="Annulla" tenue onPress={annulla} />

@@ -22,6 +22,7 @@ export default function ModificaEsercizio() {
   const [ripetizioni, setRipetizioni] = useState('10');
   const [tenuta, setTenuta] = useState('5');
   const [unita, setUnita] = useState<'s' | 'min'>('s');
+  const [riposo, setRiposo] = useState('');
   const [volte, setVolte] = useState('');
 
   useEffect(() => {
@@ -36,11 +37,12 @@ export default function ModificaEsercizio() {
       setRipetizioni(String(e.ripetizioni));
       setTenuta(String(inMinuti ? e.tenutaSecondi / 60 : e.tenutaSecondi));
       setUnita(inMinuti ? 'min' : 's');
+      setRiposo(e.riposoSecondi ? String(e.riposoSecondi) : '');
       setVolte(e.voltePerGiorno ? String(e.voltePerGiorno) : '');
     });
   }, [id, nuovo]);
 
-  const errore = validaEsercizio({ nome, ripetizioni, tenuta, voltePerGiorno: volte });
+  const errore = validaEsercizio({ nome, ripetizioni, tenuta, riposo, voltePerGiorno: volte });
 
   async function prendiFoto(daCamera: boolean) {
     if (daCamera && !(await ImagePicker.requestCameraPermissionsAsync()).granted) {
@@ -60,6 +62,7 @@ export default function ModificaEsercizio() {
       immagine,
       ripetizioni: Number(ripetizioni),
       tenutaSecondi: Number(tenuta) * (unita === 'min' ? 60 : 1),
+      ...(Number(riposo) > 0 && { riposoSecondi: Number(riposo) }),
       ...(volte.trim() && { voltePerGiorno: Number(volte) }),
       creatoIl: originale?.creatoIl ?? giornoLocale(new Date()),
     });
@@ -112,6 +115,9 @@ export default function ModificaEsercizio() {
             </Pressable>
           ))}
         </View>
+
+        <Text style={s.etichetta}>Riposo tra le ripetizioni (secondi)</Text>
+        <TextInput style={s.input} value={riposo} onChangeText={setRiposo} keyboardType="number-pad" placeholder="0" />
 
         <Text style={s.etichetta}>Volte al giorno (facoltativo)</Text>
         <TextInput style={s.input} value={volte} onChangeText={setVolte} keyboardType="number-pad" placeholder="—" />

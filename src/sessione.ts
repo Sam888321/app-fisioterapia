@@ -24,7 +24,7 @@ export async function sistemaAttiva(esercizi: Esercizio[], ora: number): Promise
     await salvaAttiva(null);
     return null;
   }
-  if (avanza(a.stato, es.ripetizioni, es.tenutaSecondi * 1000, ora).stato.fase === 'finito') {
+  if (avanza(a.stato, es.ripetizioni, es.tenutaSecondi * 1000, ora, (es.riposoSecondi ?? 0) * 1000).stato.fase === 'finito') {
     await concludiSessione(a, es, 'completato', es.ripetizioni);
     return null;
   }

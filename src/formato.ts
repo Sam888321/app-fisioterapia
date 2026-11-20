@@ -10,7 +10,7 @@ export function formatTempo(ms: number): string {
   return h ? `${h}:${due(m)}:${due(s)}` : `${due(m)}:${due(s)}`;
 }
 
-export function sottotitolo(ripetizioni: number, tenutaSecondi: number): string {
+export function sottotitolo(ripetizioni: number, tenutaSecondi: number, riposoSecondi = 0): string {
   const tenuta = tenutaSecondi >= 60 && tenutaSecondi % 60 === 0 ? `${tenutaSecondi / 60} min` : `${tenutaSecondi} s`;
-  return `${ripetizioni} × ${tenuta}`;
+  return `${ripetizioni} × ${tenuta}` + (riposoSecondi > 0 ? ` · riposo ${riposoSecondi} s` : '');
 }

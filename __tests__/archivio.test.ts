@@ -50,8 +50,11 @@ test('sessioni e attiva fanno andata e ritorno', async () => {
 });
 
 test('validaEsercizio', () => {
-  const ok = { nome: 'A', ripetizioni: '10', tenuta: '5', voltePerGiorno: '' };
+  const ok = { nome: 'A', ripetizioni: '10', tenuta: '5', voltePerGiorno: '', riposo: '' };
   expect(validaEsercizio(ok)).toBeNull();
+  expect(validaEsercizio({ ...ok, riposo: '0' })).toBeNull();
+  expect(validaEsercizio({ ...ok, riposo: '3' })).toBeNull();
+  expect(validaEsercizio({ ...ok, riposo: 'x' })).toBe('Riposo: 0 o più secondi, o vuoto');
   expect(validaEsercizio({ ...ok, voltePerGiorno: '3' })).toBeNull();
   expect(validaEsercizio({ ...ok, nome: '  ' })).toBe('Inserisci un nome');
   expect(validaEsercizio({ ...ok, ripetizioni: '0' })).toBe('Ripetizioni: almeno 1');
