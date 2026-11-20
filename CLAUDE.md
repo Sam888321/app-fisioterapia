@@ -41,10 +41,10 @@ Gotcha:
 - `JAVA_HOME` di sistema punta a jdk-20, usare jdk-21.
 - **Percorsi > 260 caratteri:** le librerie native (C++) generano percorsi lunghissimi. Serve `LongPathsEnabled=1` nel registro (attivato da Samu il 2026-11-20) **e** CMake 3.31.6 (ninja 1.12, gestisce i percorsi lunghi) tramite `cmake.dir` in `android/local.properties`. La CMake 3.22.1 di default dell'SDK fallisce.
 - `react-native.config.js` esclude da Android worklets/reanimated/gesture-handler (dipendenze transitive non usate).
-- Prima build ~17 min, poi incrementale. Nessun emulatore installato: si prova sul telefono (`adb install -r <apk>` o copiando l'APK).
+- Prima build ~17 min. Se cambia solo JS (niente prebuild) la build incrementale dura 2-5 min; un prebuild fa ricompilare il C++ (~13 min), quindi farlo solo se cambiano plugin/permessi/icone in app.json. Nessun emulatore installato: si prova sul telefono (`adb install -r <apk>` o copiando l'APK).
 
 **Scelte non ovvie:**
 - Notifica di fine con `delivery: 'alarmClock'` + permessi `USE_EXACT_ALARM`/`SCHEDULE_EXACT_ALARM`: Android non la rimanda (tutore da 1 ora). Va tolto `USE_EXACT_ALARM` se mai si pubblica sul Play Store.
 - Il timer si calcola da timestamp (`src/timer.ts`); la sessione attiva è salvata, e Home/Timer chiudono quella scaduta ad app chiusa (`src/sessione.ts`).
 
-**Stato (2026-11-20):** v1 completa, 47 test, revisione finale fatta e correzioni applicate, APK 1.1.0 generato (tema scuro, griglia, insets, icona). Da fare: collaudo sul telefono di Samu (prove a mano dei Task 7-8 del piano + notifica del tutore a schermo spento). Rimandati (minori): avviso "senza notifica" non ricompare rientrando nel timer; primo beep forse in ritardo (player creati al primo uso); se la scrittura dello storico fallisce non si ritenta.
+**Stato (2026-11-20):** v1 completa, 47 test, revisione finale fatta e correzioni applicate, APK 1.1.1 generato (tema scuro, griglia, insets, icona, tastiera che non copre i campi, anteprima foto nel Timer). Da fare: collaudo sul telefono di Samu (prove a mano dei Task 7-8 del piano + notifica del tutore a schermo spento). Rimandati (minori): avviso "senza notifica" non ricompare rientrando nel timer; primo beep forse in ritardo (player creati al primo uso); se la scrittura dello storico fallisce non si ritenta.
