@@ -26,6 +26,7 @@ docs/superpowers/   spec e piano (NON tracciati, in .gitignore)
 
 **Comandi:**
 - `npm test` — test; `npx tsc --noEmit` — typecheck.
+- **Anteprima veloce senza build (BlueStacks + Expo Go 58):** `adb connect 127.0.0.1:5555` (adb in `%LOCALAPPDATA%\Android\Sdk\platform-tools`), poi `npx expo start --android`. Screenshot: `adb -s 127.0.0.1:5555 exec-out screencap -p > shot.png`. In Expo Go il canale notifiche fallisce (limite di Expo Go, nell'APK funziona) e BlueStacks non ha barra gesti, quindi edge-to-edge e notifiche si verificano solo sul telefono.
 - `npx expo start` — dev server. I moduli nativi (notifiche) richiedono una dev build: `npx expo run:android` con telefono collegato (Android SDK in `%LOCALAPPDATA%\Android\Sdk`).
 
 **Build APK (locale, niente EAS):**

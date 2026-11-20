@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caricaEsercizi, caricaSessioni } from '../archivio';
 import { fasceOrarie, giornoLocale, RigaStorico, riepilogoMese } from '../storico';
 import { Esercizio, Sessione } from '../tipi';
@@ -18,6 +19,7 @@ function titoloGiorno(data: string, oggi: string): string {
 export default function Storico() {
   const [esercizi, setEsercizi] = useState<Esercizio[]>([]);
   const [sessioni, setSessioni] = useState<Sessione[]>([]);
+  const insets = useSafeAreaInsets();
   const [oggi, setOggi] = useState(() => new Date());
   const [mese, setMese] = useState(() => ({ anno: oggi.getFullYear(), mese: oggi.getMonth() }));
 
@@ -47,11 +49,11 @@ export default function Storico() {
     <View style={s.schermo}>
       <View style={s.mese}>
         <Pressable onPress={() => sposta(-1)} hitSlop={12} accessibilityLabel="Mese precedente">
-          <MaterialCommunityIcons name="chevron-left" size={32} color={colori.primario} />
+          <MaterialCommunityIcons name="chevron-left" size={32} color={colori.accento} />
         </Pressable>
         <Text style={s.meseTesto}>{new Date(mese.anno, mese.mese, 1).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' })}</Text>
         <Pressable onPress={() => sposta(1)} disabled={meseCorrente} hitSlop={12} accessibilityLabel="Mese successivo">
-          <MaterialCommunityIcons name="chevron-right" size={32} color={meseCorrente ? colori.bordo : colori.primario} />
+          <MaterialCommunityIcons name="chevron-right" size={32} color={meseCorrente ? colori.bordo : colori.accento} />
         </Pressable>
       </View>
 
@@ -65,7 +67,7 @@ export default function Storico() {
         stickySectionHeadersEnabled={false}
       />
 
-      <View style={s.piede}>
+      <View style={[s.piede, { paddingBottom: insets.bottom + 16 }]}>
         <Text style={s.piedeTesto}>
           {nessuna
             ? 'Nessun esercizio completato questo mese'
@@ -85,7 +87,7 @@ function Riga({ r }: { r: RigaStorico }) {
         {r.stato === 'saltato' ? (
           <Text style={[s.conteggio, { color: colori.rosso }]}>✗ {conteggio} saltato</Text>
         ) : (
-          <Text style={[s.conteggio, { color: r.stato === 'ok' ? colori.primario : colori.testo }]}>✓ {conteggio}</Text>
+          <Text style={[s.conteggio, { color: r.stato === 'ok' ? colori.accento : colori.testo }]}>✓ {conteggio}</Text>
         )}
       </View>
       {r.orari.length > 0 && <Text style={s.orari}>{r.orari.join(' · ')}</Text>}
@@ -108,7 +110,7 @@ const s = StyleSheet.create({
   nome: { fontSize: 17, fontWeight: '600', color: colori.testo, flexShrink: 1 },
   conteggio: { fontSize: 17, fontWeight: '700' },
   orari: { fontSize: 15, color: colori.tenue, marginTop: 4 },
-  annullata: { fontSize: 14, color: '#9CA3AF', marginTop: 2 },
+  annullata: { fontSize: 14, color: '#5E6E82', marginTop: 2 },
   vuoto: { textAlign: 'center', color: colori.tenue, fontSize: 16, marginTop: 40 },
   piede: { padding: 16, backgroundColor: colori.card, borderTopWidth: 1, borderColor: colori.bordo },
   piedeTesto: { fontSize: 15, color: colori.testo, textAlign: 'center' },

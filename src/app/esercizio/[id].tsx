@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caricaEsercizi, copiaFoto, eliminaEsercizio, nuovoId, salvaEsercizio } from '../../archivio';
 import { ICONE } from '../../icone';
 import { giornoLocale } from '../../storico';
@@ -12,6 +13,7 @@ import { colori, ImmagineEsercizio } from '../../ui';
 export default function ModificaEsercizio() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const nuovo = id === 'nuovo';
+  const insets = useSafeAreaInsets();
   const [originale, setOriginale] = useState<Esercizio | null>(null);
   const [nome, setNome] = useState('');
   const [immagine, setImmagine] = useState<Immagine>({ tipo: 'icona', nome: ICONE[0] });
@@ -71,7 +73,7 @@ export default function ModificaEsercizio() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colori.sfondo }} contentContainerStyle={s.contenuto} keyboardShouldPersistTaps="handled">
+    <ScrollView style={{ backgroundColor: colori.sfondo }} contentContainerStyle={[s.contenuto, { paddingBottom: insets.bottom + 32 }]} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: nuovo ? 'Nuovo esercizio' : 'Modifica esercizio' }} />
 
       <Text style={s.etichetta}>Nome</Text>
@@ -89,7 +91,7 @@ export default function ModificaEsercizio() {
         {ICONE.map((n) => (
           <Pressable key={n} onPress={() => setImmagine({ tipo: 'icona', nome: n })} accessibilityLabel={`Icona ${n}`}
             style={[s.icona, immagine.tipo === 'icona' && immagine.nome === n && s.iconaScelta]}>
-            <MaterialCommunityIcons name={n as keyof typeof MaterialCommunityIcons.glyphMap} size={30} color={colori.primario} />
+            <MaterialCommunityIcons name={n as keyof typeof MaterialCommunityIcons.glyphMap} size={30} color={colori.accento} />
           </Pressable>
         ))}
       </View>
@@ -126,8 +128,8 @@ export default function ModificaEsercizio() {
 function Bottone({ testo, icona, onPress }: { testo: string; icona: 'camera' | 'image'; onPress: () => void }) {
   return (
     <Pressable style={s.bottone} onPress={onPress}>
-      <MaterialCommunityIcons name={icona} size={20} color={colori.primario} />
-      <Text style={{ color: colori.primario, fontSize: 16, fontWeight: '600' }}>{testo}</Text>
+      <MaterialCommunityIcons name={icona} size={20} color={colori.accento} />
+      <Text style={{ color: colori.accento, fontSize: 16, fontWeight: '600' }}>{testo}</Text>
     </Pressable>
   );
 }
@@ -140,7 +142,7 @@ const s = StyleSheet.create({
   bottone: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colori.primarioChiaro, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 14 },
   icone: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 12 },
   icona: { width: 52, height: 52, borderRadius: 12, backgroundColor: colori.card, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
-  iconaScelta: { borderColor: colori.primario },
+  iconaScelta: { borderColor: colori.accento },
   unita: { paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12, backgroundColor: colori.card, borderWidth: 1, borderColor: colori.bordo },
   unitaScelta: { backgroundColor: colori.primario, borderColor: colori.primario },
   unitaTesto: { fontSize: 16, color: colori.testo, fontWeight: '600' },

@@ -16,7 +16,7 @@ export async function inizializzaNotifiche(): Promise<void> {
     name: 'Fine esercizio',
     // eslint-disable-next-line import/namespace -- esportato via `export *`, il plugin non lo vede
     importance: Notifications.AndroidImportance.MAX,
-    sound: 'default',
+    // niente `sound`: omesso = suono di sistema. 'default' verrebbe cercato come file personalizzato e il canale fallisce.
     vibrationPattern: [0, 400, 200, 400],
   });
 }

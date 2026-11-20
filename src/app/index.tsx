@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caricaEsercizi, SessioneAttiva } from '../archivio';
 import { sottotitolo } from '../formato';
 import { sistemaAttiva } from '../sessione';
@@ -12,6 +13,7 @@ import { colori, ImmagineEsercizio } from '../ui';
 export default function Home() {
   const [esercizi, setEsercizi] = useState<Esercizio[]>([]);
   const [attiva, setAttiva] = useState<SessioneAttiva | null>(null);
+  const insets = useSafeAreaInsets();
 
   const ricarica = useCallback(() => {
     caricaEsercizi().then(async (e) => {
@@ -36,7 +38,7 @@ export default function Home() {
         options={{
           headerRight: () => (
             <Pressable onPress={() => router.push('/storico')} hitSlop={12} accessibilityLabel="Storico">
-              <MaterialCommunityIcons name="history" size={28} color={colori.primario} />
+              <MaterialCommunityIcons name="history" size={28} color={colori.accento} />
             </Pressable>
           ),
         }}
@@ -49,27 +51,28 @@ export default function Home() {
       <FlatList
         data={esercizi}
         keyExtractor={(e) => e.id}
-        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: 100 }}
+        numColumns={2}
+        columnWrapperStyle={{ gap: 12 }}
+        contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 110 }}
         ListEmptyComponent={<Text style={s.vuoto}>Nessun esercizio. Aggiungine uno con +</Text>}
         renderItem={({ item }) => (
-          <Pressable style={s.card} onPress={() => apriTimer(item.id)}>
-            <ImmagineEsercizio immagine={item.immagine} size={64} />
-            <View style={{ flex: 1 }}>
-              <Text style={s.nome}>{item.nome}</Text>
-              <Text style={s.sotto}>{sottotitolo(item.ripetizioni, item.tenutaSecondi)}</Text>
-            </View>
+          <Pressable style={({ pressed }) => [s.card, pressed && { opacity: 0.7 }]} onPress={() => apriTimer(item.id)}>
+            <ImmagineEsercizio immagine={item.immagine} size={96} />
+            <Text style={s.nome} numberOfLines={2}>{item.nome}</Text>
+            <Text style={s.sotto}>{sottotitolo(item.ripetizioni, item.tenutaSecondi)}</Text>
             <Pressable
+              style={s.modifica}
               onPress={() => router.push({ pathname: '/esercizio/[id]', params: { id: item.id } })}
-              hitSlop={12}
+              hitSlop={10}
               accessibilityLabel={`Modifica ${item.nome}`}
             >
-              <MaterialCommunityIcons name="pencil" size={26} color={colori.tenue} />
+              <MaterialCommunityIcons name="pencil" size={22} color={colori.tenue} />
             </Pressable>
           </Pressable>
         )}
       />
       <Pressable
-        style={s.fab}
+        style={[s.fab, { bottom: insets.bottom + 20 }]}
         onPress={() => router.push({ pathname: '/esercizio/[id]', params: { id: 'nuovo' } })}
         accessibilityLabel="Nuovo esercizio"
       >
@@ -83,9 +86,11 @@ const s = StyleSheet.create({
   schermo: { flex: 1, backgroundColor: colori.sfondo },
   banner: { backgroundColor: colori.primario, padding: 14 },
   bannerTesto: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  card: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: colori.card, borderRadius: 16, padding: 14 },
-  nome: { fontSize: 20, fontWeight: '600', color: colori.testo },
-  sotto: { fontSize: 16, color: colori.tenue, marginTop: 2 },
+  // flex: 0.5 tiene la card a metà larghezza anche quando è sola nell'ultima riga
+  card: { flex: 0.5, alignItems: 'center', backgroundColor: colori.card, borderRadius: 18, paddingVertical: 20, paddingHorizontal: 12 },
+  nome: { fontSize: 18, fontWeight: '600', color: colori.testo, marginTop: 12, textAlign: 'center' },
+  sotto: { fontSize: 15, color: colori.tenue, marginTop: 4 },
+  modifica: { position: 'absolute', top: 10, right: 10, padding: 4 },
   vuoto: { textAlign: 'center', color: colori.tenue, fontSize: 16, marginTop: 40 },
-  fab: { position: 'absolute', right: 20, bottom: 28, width: 64, height: 64, borderRadius: 32, backgroundColor: colori.primario, alignItems: 'center', justifyContent: 'center', elevation: 4 },
+  fab: { position: 'absolute', right: 20, width: 64, height: 64, borderRadius: 32, backgroundColor: colori.primario, alignItems: 'center', justifyContent: 'center', elevation: 4 },
 });

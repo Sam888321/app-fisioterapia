@@ -13,6 +13,13 @@ async function decisione() {
   return handler.handleNotification({});
 }
 
+test('il canale usa il suono di sistema (nessun file "sound" personalizzato)', async () => {
+  await inizializzaNotifiche();
+  const [id, opzioni] = (Notifications.setNotificationChannelAsync as jest.Mock).mock.calls.at(-1);
+  expect(id).toBe('fine-esercizio');
+  expect(opzioni).not.toHaveProperty('sound');
+});
+
 test('in primo piano fuori dal timer la notifica si vede e suona', async () => {
   impostaTimerAperto(false);
   expect(await decisione()).toMatchObject({ shouldShowBanner: true, shouldPlaySound: true });

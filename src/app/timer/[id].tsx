@@ -2,6 +2,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caricaEsercizi, salvaAttiva, SessioneAttiva } from '../../archivio';
 import { formatTempo, sottotitolo } from '../../formato';
 import { esclusivo } from '../../esclusivo';
@@ -23,6 +24,7 @@ export default function Timer() {
   const [att, setAtt] = useState<SessioneAttiva | null>(null); // null = pronto a partire
   const [altra, setAltra] = useState<string | null>(null); // nome di un altro esercizio già in corso
   const [senzaNotifica, setSenzaNotifica] = useState(false);
+  const insets = useSafeAreaInsets();
   const [ora, setOra] = useState(() => Date.now());
   const attRef = useRef<SessioneAttiva | null>(null);
   const occupato = useRef(false);
@@ -180,7 +182,7 @@ export default function Timer() {
         )}
       </View>
 
-      <View style={s.comandi}>
+      <View style={[s.comandi, { paddingBottom: insets.bottom + 20 }]}>
         {!stato &&
           (altra ? (
             <Text style={s.avviso}>{`C'è già un esercizio in corso: ${altra}. Finiscilo o annullalo prima.`}</Text>
@@ -208,7 +210,7 @@ export default function Timer() {
 
 function Grande({ testo, onPress, secondario, tenue }: { testo: string; onPress: () => void; secondario?: boolean; tenue?: boolean }) {
   const sfondo = tenue ? 'transparent' : secondario ? colori.primarioChiaro : colori.primario;
-  const colore = tenue ? colori.rosso : secondario ? colori.primario : '#fff';
+  const colore = tenue ? colori.rosso : secondario ? colori.accento : '#fff';
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [s.grande, { backgroundColor: sfondo, opacity: pressed ? 0.7 : 1 }]}>
       <Text style={[s.grandeTesto, { color: colore }]}>{testo}</Text>
@@ -222,8 +224,8 @@ const s = StyleSheet.create({
   titolo: { fontSize: 26, fontWeight: '700', color: colori.testo, marginTop: 16, textAlign: 'center' },
   sotto: { fontSize: 18, color: colori.tenue, marginTop: 4 },
   contatore: { fontSize: 24, fontWeight: '600', color: colori.testo, marginTop: 24 },
-  tempo: { fontSize: 120, fontWeight: '700', color: colori.primario, fontVariant: ['tabular-nums'] },
-  fatto: { fontSize: 56, fontWeight: '800', color: colori.primario, marginTop: 24 },
+  tempo: { fontSize: 120, fontWeight: '700', color: colori.accento, fontVariant: ['tabular-nums'] },
+  fatto: { fontSize: 56, fontWeight: '800', color: colori.accento, marginTop: 24 },
   avviso: { fontSize: 15, color: colori.tenue, textAlign: 'center', marginTop: 12 },
   comandi: { padding: 20, gap: 12, paddingBottom: 36 },
   grande: { borderRadius: 16, paddingVertical: 20, alignItems: 'center' },
