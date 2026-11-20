@@ -27,6 +27,17 @@ docs/superpowers/   spec e piano (NON tracciati, in .gitignore)
 **Comandi:**
 - `npm test` — test; `npx tsc --noEmit` — typecheck.
 - `npx expo start` — dev server. I moduli nativi (notifiche) richiedono una dev build: `npx expo run:android` con telefono collegato (Android SDK in `%LOCALAPPDATA%\Android\Sdk`).
-- APK: vedi sezione Build (in arrivo).
 
-**Stato:** in sviluppo secondo il piano `docs/superpowers/plans/2026-11-20-app-fisioterapia.md`.
+**Build APK (locale, niente EAS):**
+```bash
+npx expo prebuild --platform android      # rigenera android/ da app.json (dopo modifiche a plugin/permessi)
+cd android && JAVA_HOME="/c/Program Files/Java/jdk-21" ./gradlew assembleRelease
+# → android/app/build/outputs/apk/release/app-release.apk (firmata con la debug keystore: ok per sideload)
+```
+Gotcha: `JAVA_HOME` di sistema punta a jdk-20, usare jdk-21. Nessun emulatore installato: si prova sul telefono (`adb install -r <apk>` o copiando l'APK).
+
+**Scelte non ovvie:**
+- Notifica di fine con `delivery: 'alarmClock'` + permessi `USE_EXACT_ALARM`/`SCHEDULE_EXACT_ALARM`: Android non la rimanda (tutore da 1 ora). Va tolto `USE_EXACT_ALARM` se mai si pubblica sul Play Store.
+- Il timer si calcola da timestamp (`src/timer.ts`); la sessione attiva è salvata, e Home/Timer chiudono quella scaduta ad app chiusa (`src/sessione.ts`).
+
+**Stato:** v1 completa (tutte le schermate, 43 test). Da fare: collaudo sul telefono di Samu (prove a mano dei Task 7-8 del piano + notifica del tutore a schermo spento).

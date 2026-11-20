@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
 import { router, Stack, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { caricaEsercizi, SessioneAttiva } from '../archivio';
 import { sottotitolo } from '../formato';
@@ -12,14 +13,19 @@ export default function Home() {
   const [esercizi, setEsercizi] = useState<Esercizio[]>([]);
   const [attiva, setAttiva] = useState<SessioneAttiva | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      caricaEsercizi().then(async (e) => {
-        setEsercizi(e);
-        setAttiva(await sistemaAttiva(e, Date.now()));
-      });
-    }, []),
-  );
+  const ricarica = useCallback(() => {
+    caricaEsercizi().then(async (e) => {
+      setEsercizi(e);
+      setAttiva(await sistemaAttiva(e, Date.now()));
+    });
+  }, []);
+  useFocusEffect(ricarica);
+
+  // Esercizio finito mentre l'app è aperta su un'altra schermata: chiude la sessione e toglie il banner.
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener(ricarica);
+    return () => sub.remove();
+  }, [ricarica]);
 
   const inCorso = attiva && esercizi.find((e) => e.id === attiva.esercizioId);
   const apriTimer = (id: string) => router.push({ pathname: '/timer/[id]', params: { id } });

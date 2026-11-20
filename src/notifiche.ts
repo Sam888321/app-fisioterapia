@@ -2,10 +2,15 @@ import * as Notifications from 'expo-notifications';
 
 const CANALE = 'fine-esercizio';
 
+let timerAperto = false;
+export function impostaTimerAperto(aperto: boolean): void {
+  timerAperto = aperto;
+}
+
 export async function inizializzaNotifiche(): Promise<void> {
-  // In primo piano il suono lo fa già l'app: niente banner né suono di sistema.
+  // Con il timer a schermo il suono lo fa già l'app; su Home/Storico/Modifica la notifica deve farsi sentire.
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({ shouldShowBanner: false, shouldShowList: false, shouldPlaySound: false, shouldSetBadge: false }),
+    handleNotification: async () => ({ shouldShowBanner: !timerAperto, shouldShowList: !timerAperto, shouldPlaySound: !timerAperto, shouldSetBadge: false }),
   });
   await Notifications.setNotificationChannelAsync(CANALE, {
     name: 'Fine esercizio',

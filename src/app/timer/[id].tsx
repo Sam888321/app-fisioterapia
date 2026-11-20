@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { caricaEsercizi, salvaAttiva, SessioneAttiva } from '../../archivio';
 import { formatTempo, sottotitolo } from '../../formato';
-import { chiediPermesso, annullaNotifica, programmaFine } from '../../notifiche';
+import { esclusivo } from '../../esclusivo';
+import { annullaNotifica, chiediPermesso, impostaTimerAperto, programmaFine } from '../../notifiche';
 import { concludiSessione, sistemaAttiva } from '../../sessione';
 import { suona } from '../../suoni';
 import { avanza, avvia, fineEsercizio, pausa, restanteMs, riprendi, ripetizioniFatte, StatoTimer } from '../../timer';
@@ -24,6 +25,12 @@ export default function Timer() {
   const [senzaNotifica, setSenzaNotifica] = useState(false);
   const [ora, setOra] = useState(() => Date.now());
   const attRef = useRef<SessioneAttiva | null>(null);
+  const occupato = useRef(false);
+
+  useEffect(() => {
+    impostaTimerAperto(true);
+    return () => impostaTimerAperto(false);
+  }, []);
 
   const aggiorna = (a: SessioneAttiva | null) => {
     attRef.current = a;
@@ -77,15 +84,16 @@ export default function Timer() {
   const tenutaMs = es.tenutaSecondi * 1000;
   const stato: StatoTimer | null = att?.stato ?? null;
 
-  async function inizia() {
-    if (!es) return;
-    setSenzaNotifica(!(await chiediPermesso()));
-    const st = avvia(Date.now());
-    const notificaId = await programmaFine(fineEsercizio(st, es.ripetizioni, tenutaMs)!, es.nome);
-    const n: SessioneAttiva = { esercizioId: es.id, inizio: new Date().toISOString(), stato: st, notificaId };
-    aggiorna(n);
-    await salvaAttiva(n);
-  }
+  const inizia = () =>
+    esclusivo(occupato, async () => {
+      if (!es || attRef.current) return;
+      setSenzaNotifica(!(await chiediPermesso()));
+      const st = avvia(Date.now());
+      const notificaId = await programmaFine(fineEsercizio(st, es.ripetizioni, tenutaMs)!, es.nome);
+      const n: SessioneAttiva = { esercizioId: es.id, inizio: new Date().toISOString(), stato: st, notificaId };
+      aggiorna(n);
+      await salvaAttiva(n);
+    });
 
   async function metteInPausa() {
     const a = attRef.current;
@@ -96,15 +104,16 @@ export default function Timer() {
     await salvaAttiva(n);
   }
 
-  async function riparte(ricomincia: boolean) {
-    const a = attRef.current;
-    if (!a || !es) return;
-    const st = riprendi(a.stato, tenutaMs, Date.now(), ricomincia);
-    const notificaId = await programmaFine(fineEsercizio(st, es.ripetizioni, tenutaMs)!, es.nome);
-    const n = { ...a, stato: st, notificaId };
-    aggiorna(n);
-    await salvaAttiva(n);
-  }
+  const riparte = (ricomincia: boolean) =>
+    esclusivo(occupato, async () => {
+      const a = attRef.current;
+      if (!a || !es || a.stato.fase !== 'pausa') return;
+      const st = riprendi(a.stato, tenutaMs, Date.now(), ricomincia);
+      const notificaId = await programmaFine(fineEsercizio(st, es.ripetizioni, tenutaMs)!, es.nome);
+      const n = { ...a, stato: st, notificaId };
+      aggiorna(n);
+      await salvaAttiva(n);
+    });
 
   function annulla() {
     Alert.alert("Annullare l'esercizio?", undefined, [
