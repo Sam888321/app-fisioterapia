@@ -2,8 +2,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { caricaAttiva, caricaEsercizi, SessioneAttiva } from '../archivio';
+import { caricaEsercizi, SessioneAttiva } from '../archivio';
 import { sottotitolo } from '../formato';
+import { sistemaAttiva } from '../sessione';
 import { Esercizio } from '../tipi';
 import { colori, ImmagineEsercizio } from '../ui';
 
@@ -13,8 +14,10 @@ export default function Home() {
 
   useFocusEffect(
     useCallback(() => {
-      caricaEsercizi().then(setEsercizi);
-      caricaAttiva().then(setAttiva);
+      caricaEsercizi().then(async (e) => {
+        setEsercizi(e);
+        setAttiva(await sistemaAttiva(e, Date.now()));
+      });
     }, []),
   );
 

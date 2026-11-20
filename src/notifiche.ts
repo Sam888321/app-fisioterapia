@@ -9,6 +9,7 @@ export async function inizializzaNotifiche(): Promise<void> {
   });
   await Notifications.setNotificationChannelAsync(CANALE, {
     name: 'Fine esercizio',
+    // eslint-disable-next-line import/namespace -- esportato via `export *`, il plugin non lo vede
     importance: Notifications.AndroidImportance.MAX,
     sound: 'default',
     vibrationPattern: [0, 400, 200, 400],
