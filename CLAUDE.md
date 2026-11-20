@@ -45,6 +45,7 @@ Gotcha:
 
 **Scelte non ovvie:**
 - Notifica di fine con `delivery: 'alarmClock'` + permessi `USE_EXACT_ALARM`/`SCHEDULE_EXACT_ALARM`: Android non la rimanda (tutore da 1 ora). Va tolto `USE_EXACT_ALARM` se mai si pubblica sul Play Store.
+- Beep in anticipo sullo scatto (`anticipoBeep` in AsyncStorage, default 110 ms, regolabile da Impostazioni): l'audio Android arriva in ritardo. In Expo Go serviva ~500 ms (modalità sviluppo), nell'APK va ritarato.
 - Il timer si calcola da timestamp (`src/timer.ts`); la sessione attiva è salvata, e Home/Timer chiudono quella scaduta ad app chiusa (`src/sessione.ts`).
 
-**Stato (2026-11-20):** v1 completa, 57 test, riposo configurabile tra le ripetizioni (fase `riposo` in `src/timer.ts`, campo `riposoSecondi`, assente = 0), revisione finale fatta e correzioni applicate, APK 1.1.1 generato (tema scuro, griglia, insets, icona, tastiera che non copre i campi, anteprima foto nel Timer). Da fare: collaudo sul telefono di Samu (prove a mano dei Task 7-8 del piano + notifica del tutore a schermo spento). Rimandati (minori): avviso "senza notifica" non ricompare rientrando nel timer; se la scrittura dello storico fallisce non si ritenta.
+**Stato (2026-11-20):** v1 completa, 58 test, riposo configurabile tra le ripetizioni (fase `riposo` in `src/timer.ts`, campo `riposoSecondi`, assente = 0), revisione finale fatta e correzioni applicate, APK 1.1.2 generato (tema scuro, griglia, insets, icona, tastiera, anteprima foto, riposo, Impostazioni con anticipo beep). Da fare: collaudo sul telefono di Samu (prove a mano dei Task 7-8 del piano + notifica del tutore a schermo spento). Rimandati (minori): avviso "senza notifica" non ricompare rientrando nel timer; se la scrittura dello storico fallisce non si ritenta.
