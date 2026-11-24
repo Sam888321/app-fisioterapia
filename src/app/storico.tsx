@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caricaEsercizi, caricaSessioni } from '../archivio';
 import { Calendario } from '../componenti/Calendario';
 import { formatDurata } from '../formato';
+import { testoRiepilogo } from '../riepilogo';
 import { coloriMese, giornoLocale, Riquadro, riquadriGiorno, serie } from '../storico';
 import { Esercizio, Sessione } from '../tipi';
 import { colori, DOLORI, ImmagineEsercizio } from '../ui';
@@ -42,6 +43,15 @@ export default function Storico() {
     setScelto(ultimo < oggi ? ultimo : oggi);
   }
 
+  function condividi() {
+    const invia = (giorni: number) => Share.share({ message: testoRiepilogo(esercizi, sessioni, giorni, giornoLocale(new Date())) });
+    Alert.alert('Condividi riepilogo', undefined, [
+      { text: 'Annulla', style: 'cancel' },
+      { text: 'Ultimi 30 giorni', onPress: () => invia(30) },
+      { text: 'Ultimi 7 giorni', onPress: () => invia(7) },
+    ]);
+  }
+
   const riquadri = riquadriGiorno(esercizi, sessioni, scelto, oggi);
   const giorniDiFila = serie(esercizi, sessioni, oggi);
 
@@ -50,9 +60,14 @@ export default function Storico() {
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable onPress={() => router.push('/andamento')} hitSlop={12} accessibilityLabel="Andamento">
-              <MaterialCommunityIcons name="chart-bar" size={28} color={colori.accento} />
-            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 20 }}>
+              <Pressable onPress={() => router.push('/andamento')} hitSlop={12} accessibilityLabel="Andamento">
+                <MaterialCommunityIcons name="chart-bar" size={28} color={colori.accento} />
+              </Pressable>
+              <Pressable onPress={condividi} hitSlop={12} accessibilityLabel="Condividi riepilogo">
+                <MaterialCommunityIcons name="share-variant" size={26} color={colori.accento} />
+              </Pressable>
+            </View>
           ),
         }}
       />
