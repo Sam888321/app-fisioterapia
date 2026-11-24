@@ -54,6 +54,10 @@ export async function aggiungiSessione(s: Sessione): Promise<void> {
   await scrivi('sessioni', [...(await caricaSessioni()), s]);
 }
 
+export async function aggiornaSessione(id: string, modifica: Partial<Sessione>): Promise<void> {
+  await scrivi('sessioni', (await caricaSessioni()).map((s) => (s.id === id ? { ...s, ...modifica } : s)));
+}
+
 export async function caricaAttiva(): Promise<SessioneAttiva | null> {
   return leggi<SessioneAttiva>('attiva');
 }

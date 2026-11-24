@@ -5,7 +5,7 @@ jest.mock('../src/notifiche', () => ({ annullaNotifica: jest.fn(async () => {}) 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { caricaAttiva, caricaSessioni, salvaAttiva, SessioneAttiva } from '../src/archivio';
 import { annullaNotifica } from '../src/notifiche';
-import { concludiSessione, sistemaAttiva } from '../src/sessione';
+import { concludiSessione, nuovaSessione, scartaSessione, sistemaAttiva } from '../src/sessione';
 import { Esercizio } from '../src/tipi';
 
 const tutore: Esercizio = { id: 'B', nome: 'Tutore', immagine: { tipo: 'icona', nome: 'x' }, ripetizioni: 1, tenutaSecondi: 3600, creatoIl: '2026-11-20' };
@@ -26,10 +26,11 @@ test('attiva scaduta viene registrata una volta e cancellata', async () => {
   expect(await caricaAttiva()).toBeNull();
   const s = await caricaSessioni();
   expect(s).toHaveLength(1);
-  expect(s[0]).toMatchObject({ esercizioId: 'B', nomeEsercizio: 'Tutore', inizio: 'scaduta-1', esito: 'completato', ripetizioniFatte: 1 });
+  expect(s[0]).toMatchObject({ esercizioId: 'B', nomeEsercizio: 'Tutore', inizio: 'scaduta-1', esito: 'completato', ripetizioniFatte: 1, restanteMs: 0, ripetizioni: 1, tenutaSecondi: 3600 });
+  expect(s[0].fine).toBe(new Date(ora - 1).toISOString()); // l'ora reale di fine, non quella di apertura
   expect(annullaNotifica).toHaveBeenCalledWith('n1');
 
-  await concludiSessione(a, tutore, 'completato', 1); // secondo tentativo (timer + home)
+  expect(await concludiSessione(a, tutore, 'completato', ora)).toBeNull(); // secondo tentativo (timer + home)
   expect(await caricaSessioni()).toHaveLength(1);
 });
 
@@ -64,4 +65,46 @@ test('i riposi allungano la sessione: non va chiusa prima del tempo', async () =
   const a: SessioneAttiva = { esercizioId: 'B', inizio: 'con-riposo', stato: { fase: 'tenuta', ripetizione: 1, fineFase: ora }, notificaId: null };
   await salvaAttiva(a);
   expect(await sistemaAttiva([es], ora + 15_000)).toEqual(a);
+});
+
+describe('nuovaSessione', () => {
+  const fless: Esercizio = { id: 'A', nome: 'Flessione', immagine: { tipo: 'icona', nome: 'x' }, ripetizioni: 10, tenutaSecondi: 5, riposoSecondi: 2, creatoIl: '2026-11-20' };
+  const base = (stato: SessioneAttiva['stato']): SessioneAttiva => ({ esercizioId: 'A', inizio: '2026-11-20T09:00:00.000Z', stato, notificaId: null });
+
+  test('completata: fine esatta e copia dei parametri', () => {
+    const s = nuovaSessione(base({ fase: 'tenuta', ripetizione: 10, fineFase: ora - 500 }), fless, 'completato', ora, 'x1');
+    expect(s).toEqual({
+      id: 'x1', esercizioId: 'A', nomeEsercizio: 'Flessione', inizio: '2026-11-20T09:00:00.000Z', esito: 'completato',
+      ripetizioniFatte: 10, restanteMs: 0, fine: new Date(ora - 500).toISOString(), ripetizioni: 10, tenutaSecondi: 5, riposoSecondi: 2,
+    });
+  });
+
+  test('interrotta in tenuta: ripetizioni concluse e tempo mancante', () => {
+    const s = nuovaSessione(base({ fase: 'pausa', ripetizione: 7, restanteMs: 2000, faseSospesa: 'tenuta' }), fless, 'interrotto', ora, 'x2');
+    expect(s).toMatchObject({ esito: 'interrotto', ripetizioniFatte: 6, restanteMs: 2000, fine: new Date(ora).toISOString() });
+  });
+
+  test('interrotta nel riposo: niente tempo mancante', () =>
+    expect(nuovaSessione(base({ fase: 'pausa', ripetizione: 7, restanteMs: 1000, faseSospesa: 'riposo' }), fless, 'interrotto', ora, 'x3'))
+      .toMatchObject({ ripetizioniFatte: 6, restanteMs: 0 }));
+
+  test('interrotta nella preparazione', () =>
+    expect(nuovaSessione(base({ fase: 'pausa', ripetizione: 1, restanteMs: 1000, faseSospesa: 'preparazione' }), fless, 'interrotto', ora, 'x4'))
+      .toMatchObject({ ripetizioniFatte: 0, restanteMs: 0 }));
+});
+
+test("concludiSessione restituisce l'id salvato", async () => {
+  const a: SessioneAttiva = { ...attiva(0, 'con-id'), stato: { fase: 'pausa', ripetizione: 1, restanteMs: 300_000, faseSospesa: 'tenuta' } };
+  const id = await concludiSessione(a, tutore, 'interrotto', ora);
+  expect(id).toEqual(expect.any(String));
+  expect(await caricaSessioni()).toEqual([expect.objectContaining({ id, esito: 'interrotto', restanteMs: 300_000 })]);
+});
+
+test('scartaSessione non registra niente', async () => {
+  const a = attiva(ora + 60_000, 'da-scartare');
+  await salvaAttiva(a);
+  await scartaSessione(a);
+  expect(await caricaAttiva()).toBeNull();
+  expect(await caricaSessioni()).toEqual([]);
+  expect(annullaNotifica).toHaveBeenCalledWith('n1');
 });

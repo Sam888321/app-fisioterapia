@@ -1,19 +1,5 @@
+import { PREPARAZIONE_MS } from './timer';
 import { Esercizio, Sessione } from './tipi';
-
-export interface RigaStorico {
-  esercizioId: string;
-  nome: string;
-  completate: number;
-  target?: number;
-  orari: string[]; // HH:MM delle completate, crescenti
-  annullate: { orario: string; ripetizioniFatte: number }[];
-  stato: 'ok' | 'saltato' | 'oggi';
-}
-
-export interface GiornoStorico {
-  data: string;
-  righe: RigaStorico[];
-}
 
 const due = (n: number) => String(n).padStart(2, '0');
 
@@ -21,53 +7,39 @@ export function giornoLocale(d: Date): string {
   return `${d.getFullYear()}-${due(d.getMonth() + 1)}-${due(d.getDate())}`;
 }
 
-const orario = (d: Date) => `${due(d.getHours())}:${due(d.getMinutes())}`;
-
-export function riepilogoMese(esercizi: Esercizio[], sessioni: Sessione[], anno: number, mese: number, oggi: Date): GiornoStorico[] {
-  const perGiorno = new Map<string, Sessione[]>();
-  for (const s of [...sessioni].sort((a, b) => a.inizio.localeCompare(b.inizio))) {
-    const g = giornoLocale(new Date(s.inizio));
-    perGiorno.set(g, [...(perGiorno.get(g) ?? []), s]);
-  }
-  const dataOggi = giornoLocale(oggi);
-  const ultimo = new Date(anno, mese + 1, 0).getDate();
-  const giorni: GiornoStorico[] = [];
-
-  for (let g = ultimo; g >= 1; g--) {
-    const data = giornoLocale(new Date(anno, mese, g));
-    if (data > dataOggi) continue;
-    const delGiorno = perGiorno.get(data) ?? [];
-    const ids = new Set([...esercizi.filter((e) => e.creatoIl <= data).map((e) => e.id), ...delGiorno.map((s) => s.esercizioId)]);
-
-    const righe = [...ids].map((id): RigaStorico => {
-      const es = esercizi.find((e) => e.id === id);
-      const sue = delGiorno.filter((s) => s.esercizioId === id);
-      const fatte = sue.filter((s) => s.esito === 'completato');
-      const target = es?.voltePerGiorno;
-      const completate = fatte.length;
-      const saltato = target !== undefined ? completate < target : completate === 0;
-      return {
-        esercizioId: id,
-        nome: es?.nome ?? sue[sue.length - 1].nomeEsercizio,
-        completate,
-        ...(target !== undefined && { target }),
-        orari: fatte.map((s) => orario(new Date(s.inizio))),
-        annullate: sue.filter((s) => s.esito === 'annullato').map((s) => ({ orario: orario(new Date(s.inizio)), ripetizioniFatte: s.ripetizioniFatte })),
-        stato: data === dataOggi ? 'oggi' : saltato ? 'saltato' : 'ok',
-      };
-    });
-    if (righe.length) giorni.push({ data, righe: righe.sort((a, b) => a.nome.localeCompare(b.nome)) });
-  }
-  return giorni;
+// Un esercizio lungo da una ripetizione (il tutore) si misura in tempo, il resto in volte.
+export function misura(e: { ripetizioni: number; tenutaSecondi: number }): 'tempo' | 'volte' {
+  return e.ripetizioni === 1 && e.tenutaSecondi >= 60 ? 'tempo' : 'volte';
 }
 
-export function fasceOrarie(sessioni: Sessione[]): { mattina: number; pomeriggio: number; sera: number } {
-  const c = { mattina: 0, pomeriggio: 0, sera: 0 };
-  const fatte = sessioni.filter((s) => s.esito === 'completato');
-  for (const s of fatte) {
-    const h = new Date(s.inizio).getHours();
-    c[h >= 5 && h < 12 ? 'mattina' : h >= 12 && h < 18 ? 'pomeriggio' : 'sera']++;
+export type SessioneNorm = Sessione & { esito: 'completato' | 'interrotto'; fine: string; restanteMs: number };
+
+// Le sessioni fino alla 1.1.2 non hanno copia dei parametri né fine: si prendono dall'esercizio attuale
+// e la fine si stima. Le vecchie "annullate" erano lavoro fatto: diventano interrotte.
+export function normalizza(s: Sessione, esercizi: Esercizio[]): SessioneNorm {
+  const es = esercizi.find((e) => e.id === s.esercizioId);
+  const ripetizioni = s.ripetizioni ?? es?.ripetizioni;
+  const tenutaSecondi = s.tenutaSecondi ?? es?.tenutaSecondi;
+  const riposoSecondi = s.riposoSecondi ?? es?.riposoSecondi;
+  const esito = s.esito === 'completato' ? 'completato' : 'interrotto';
+  let fine = s.fine;
+  if (!fine) {
+    const n = esito === 'completato' ? ripetizioni : s.ripetizioniFatte;
+    const stimata = n !== undefined && tenutaSecondi !== undefined
+      ? Date.parse(s.inizio) + PREPARAZIONE_MS + n * tenutaSecondi * 1000 + Math.max(0, n - 1) * (riposoSecondi ?? 0) * 1000
+      : Date.parse(s.inizio);
+    fine = Number.isNaN(stimata) ? s.inizio : new Date(stimata).toISOString();
   }
-  const pct = (x: number) => (fatte.length ? Math.round((x / fatte.length) * 100) : 0);
-  return { mattina: pct(c.mattina), pomeriggio: pct(c.pomeriggio), sera: pct(c.sera) };
+  return { ...s, esito, fine, restanteMs: s.restanteMs ?? 0, ripetizioni, tenutaSecondi, riposoSecondi };
+}
+
+export function ripetizioneRaggiunta(s: SessioneNorm): number {
+  return s.ripetizioniFatte + (s.restanteMs > 0 ? 1 : 0);
+}
+
+// Tempo di tenuta fatto (le pause non contano); null se la tenuta non è nota (esercizio eliminato).
+export function tenutaFattaMs(s: SessioneNorm): number | null {
+  if (s.tenutaSecondi === undefined) return null;
+  const T = s.tenutaSecondi * 1000;
+  return s.ripetizioniFatte * T + (s.restanteMs > 0 ? T - s.restanteMs : 0);
 }

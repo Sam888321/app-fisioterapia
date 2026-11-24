@@ -23,11 +23,20 @@ export function validaEsercizio(b: { nome: string; ripetizioni: string; tenuta: 
   return null;
 }
 
+export type Dolore = 0 | 1 | 2 | 3; // nessuno, lieve, medio, forte
+
 export interface Sessione {
   id: string;
   esercizioId: string;
   nomeEsercizio: string;
   inizio: string; // ISO
-  esito: 'completato' | 'annullato';
-  ripetizioniFatte: number;
+  esito: 'completato' | 'interrotto' | 'annullato'; // 'annullato': solo sessioni registrate fino alla 1.1.2
+  ripetizioniFatte: number; // ripetizioni concluse
+  // Dalla 1.2.0 (assenti nelle sessioni vecchie, vedi normalizza in storico.ts):
+  fine?: string; // ISO
+  ripetizioni?: number; // copia dei parametri dell'esercizio al momento della sessione
+  tenutaSecondi?: number;
+  riposoSecondi?: number;
+  restanteMs?: number; // quanto mancava alla tenuta in corso quando è stata interrotta
+  dolore?: Dolore;
 }

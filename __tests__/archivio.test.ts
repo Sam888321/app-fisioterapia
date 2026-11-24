@@ -2,7 +2,7 @@ jest.mock('@react-native-async-storage/async-storage', () => require('@react-nat
 jest.mock('expo-file-system', () => ({}));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { aggiungiSessione, caricaAnticipo, caricaAttiva, caricaEsercizi, caricaSessioni, eliminaEsercizio, nuovoId, salvaAnticipo, salvaAttiva, salvaEsercizio } from '../src/archivio';
+import { aggiornaSessione, aggiungiSessione, caricaAnticipo, caricaAttiva, caricaEsercizi, caricaSessioni, eliminaEsercizio, nuovoId, salvaAnticipo, salvaAttiva, salvaEsercizio } from '../src/archivio';
 import { validaEsercizio } from '../src/tipi';
 
 beforeEach(() => AsyncStorage.clear());
@@ -68,4 +68,12 @@ test('anticipo beep: 110 ms se mai impostato, poi quello salvato', async () => {
   expect(await caricaAnticipo()).toBe(110);
   await salvaAnticipo(80);
   expect(await caricaAnticipo()).toBe(80);
+});
+
+test('aggiornaSessione modifica solo quella sessione', async () => {
+  const s = { esercizioId: 'A', nomeEsercizio: 'A', inizio: '2026-11-20T09:00:00.000Z', esito: 'completato' as const, ripetizioniFatte: 1 };
+  await aggiungiSessione({ ...s, id: 's1' });
+  await aggiungiSessione({ ...s, id: 's2' });
+  await aggiornaSessione('s2', { dolore: 2 });
+  expect(await caricaSessioni()).toEqual([{ ...s, id: 's1' }, { ...s, id: 's2', dolore: 2 }]);
 });

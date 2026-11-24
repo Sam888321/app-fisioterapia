@@ -7,9 +7,9 @@ import { caricaAnticipo, caricaEsercizi, salvaAttiva, SessioneAttiva } from '../
 import { formatTempo, sottotitolo } from '../../formato';
 import { esclusivo } from '../../esclusivo';
 import { annullaNotifica, chiediPermesso, impostaTimerAperto, programmaFine } from '../../notifiche';
-import { concludiSessione, sistemaAttiva } from '../../sessione';
+import { concludiSessione, scartaSessione, sistemaAttiva } from '../../sessione';
 import { precaricaSuoni, suona } from '../../suoni';
-import { avanza, avvia, Evento, fineEsercizio, pausa, restanteMs, riprendi, ripetizioniFatte, StatoTimer } from '../../timer';
+import { avanza, avvia, Evento, fineEsercizio, pausa, restanteMs, riprendi, StatoTimer } from '../../timer';
 import { Esercizio } from '../../tipi';
 import { colori, ImmagineEsercizio } from '../../ui';
 
@@ -74,7 +74,7 @@ export default function Timer() {
         if ('fineFase' in a.stato) beep(eventi, a.stato.fineFase); // se l'anticipo non è partito (app in background)
         const n = { ...a, stato };
         aggiorna(n);
-        if (stato.fase === 'finito') concludiSessione(a, es, 'completato', es.ripetizioni);
+        if (stato.fase === 'finito') concludiSessione(a, es, 'completato', Date.now());
         else salvaAttiva(n);
       }
       setOra(Date.now());
@@ -156,7 +156,7 @@ export default function Timer() {
           const a = attRef.current;
           if (!a || !es) return;
           aggiorna(null);
-          await concludiSessione(a, es, 'annullato', ripetizioniFatte(a.stato, es.ripetizioni));
+          await scartaSessione(a);
           router.back();
         },
       },
