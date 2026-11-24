@@ -78,14 +78,21 @@ test('aggiornaSessione modifica solo quella sessione', async () => {
   expect(await caricaSessioni()).toEqual([{ ...s, id: 's1' }, { ...s, id: 's2', dolore: 2 }]);
 });
 
-test('sostituisciDati sovrascrive esercizi, sessioni e anticipo ma non la sessione attiva', async () => {
-  const attiva = { esercizioId: 'A', inizio: 'x', stato: { fase: 'pausa' as const, ripetizione: 1, restanteMs: 1, faseSospesa: 'tenuta' as const }, notificaId: null };
-  await salvaAttiva(attiva);
+const nuovo = { id: 'N', nome: 'Nuovo', immagine: { tipo: 'icona' as const, nome: 'x' }, ripetizioni: 1, tenutaSecondi: 5, creatoIl: '2026-11-24' };
+
+test('sostituisciDati sovrascrive esercizi, sessioni e anticipo', async () => {
   await caricaEsercizi(); // crea i seed
-  const nuovo = { id: 'N', nome: 'Nuovo', immagine: { tipo: 'icona' as const, nome: 'x' }, ripetizioni: 1, tenutaSecondi: 5, creatoIl: '2026-11-24' };
-  await sostituisciDati({ esercizi: [nuovo], sessioni: [], anticipoBeep: 90 });
+  expect(await sostituisciDati({ esercizi: [nuovo], sessioni: [], anticipoBeep: 90 })).toBe(true);
   expect(await caricaEsercizi()).toEqual([nuovo]);
   expect(await caricaSessioni()).toEqual([]);
   expect(await caricaAnticipo()).toBe(90);
+});
+
+test('sostituisciDati rifiuta con un esercizio in corso (la sua sveglia andrebbe persa)', async () => {
+  const attiva = { esercizioId: 'A', inizio: 'x', stato: { fase: 'tenuta' as const, ripetizione: 1, fineFase: 1 }, notificaId: 'n' };
+  await salvaAttiva(attiva);
+  const prima = await caricaEsercizi();
+  expect(await sostituisciDati({ esercizi: [nuovo], sessioni: [], anticipoBeep: 90 })).toBe(false);
+  expect(await caricaEsercizi()).toEqual(prima);
   expect(await caricaAttiva()).toEqual(attiva);
 });

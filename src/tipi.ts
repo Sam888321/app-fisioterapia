@@ -37,6 +37,7 @@ export interface Sessione {
   ripetizioni?: number; // copia dei parametri dell'esercizio al momento della sessione
   tenutaSecondi?: number;
   riposoSecondi?: number;
+  obiettivo?: number; // copia di voltePerGiorno (1 se non impostato): i giorni passati restano giudicati col minimo di allora
   restanteMs?: number; // quanto mancava alla tenuta in corso quando è stata interrotta
   dolore?: Dolore;
 }

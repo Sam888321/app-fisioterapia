@@ -75,7 +75,7 @@ describe('nuovaSessione', () => {
     const s = nuovaSessione(base({ fase: 'tenuta', ripetizione: 10, fineFase: ora - 500 }), fless, 'completato', ora, 'x1');
     expect(s).toEqual({
       id: 'x1', esercizioId: 'A', nomeEsercizio: 'Flessione', inizio: '2026-11-20T09:00:00.000Z', esito: 'completato',
-      ripetizioniFatte: 10, restanteMs: 0, fine: new Date(ora - 500).toISOString(), ripetizioni: 10, tenutaSecondi: 5, riposoSecondi: 2,
+      ripetizioniFatte: 10, restanteMs: 0, fine: new Date(ora - 500).toISOString(), ripetizioni: 10, tenutaSecondi: 5, riposoSecondi: 2, obiettivo: 1,
     });
   });
 

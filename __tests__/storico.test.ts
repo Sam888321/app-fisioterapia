@@ -137,3 +137,21 @@ describe('riquadri, colori e serie', () => {
     expect(c['2026-11-21']).toBeUndefined();
   });
 });
+
+test("il minimo di un giorno passato è quello salvato nella sessione, non quello attuale", () => {
+  const ora3 = { ...fless, voltePerGiorno: 3 }; // obiettivo alzato dopo
+  const s = (h: number) => ses({ id: `o${h}`, inizio: new Date(2026, 10, 19, h).toISOString(), obiettivo: 2 });
+  const r = riquadriGiorno([ora3], [s(9), s(12)], '2026-11-19', '2026-11-20')[0];
+  expect(r).toMatchObject({ obiettivo: 2, colore: 'verde' });
+});
+
+test('storico veloce anche con un anno di dati', () => {
+  const ss: Sessione[] = [];
+  for (let g = 0; g < 365; g++) for (let h = 8; h < 17; h++)
+    ss.push(ses({ id: `y${g}-${h}`, inizio: new Date(2025, 10, 20 + g, h).toISOString() }));
+  const A2 = { ...fless, voltePerGiorno: 2, creatoIl: '2025-11-20' };
+  const t0 = Date.now();
+  expect(serie([A2], ss, '2026-11-19')).toBeGreaterThan(300);
+  coloriMese([A2], ss, 2026, 10, '2026-11-19');
+  expect(Date.now() - t0).toBeLessThan(250); // senza indice per giorno: ~1 s
+});

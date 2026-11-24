@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Directory, File } from 'expo-file-system';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
-import { caricaAnticipo, caricaEsercizi, caricaSessioni, salvaAnticipo, sostituisciDati } from '../archivio';
+import { caricaAnticipo, caricaAttiva, caricaEsercizi, caricaSessioni, salvaAnticipo, sostituisciDati } from '../archivio';
 import { creaBackup, leggiBackup } from '../backup';
 import { giornoLocale } from '../storico';
 import { colori } from '../ui';
@@ -32,6 +32,10 @@ ${esercizi.length} esercizi, ${sessioni.length} sessioni.`);
   }
 
   async function importa() {
+    if (await caricaAttiva()) {
+      Alert.alert('Esercizio in corso', "Finisci o annulla l'esercizio in corso prima di importare i dati.");
+      return;
+    }
     try {
       const scelta = await File.pickFileAsync();
       if (scelta.canceled) return;
@@ -49,7 +53,10 @@ ${esercizi.length} esercizi, ${sessioni.length} sessioni.`);
             text: 'Sostituisci',
             style: 'destructive',
             onPress: async () => {
-              await sostituisciDati(dati);
+              if (!(await sostituisciDati(dati))) {
+                Alert.alert('Esercizio in corso', "Finisci o annulla l'esercizio in corso prima di importare i dati.");
+                return;
+              }
               setAnticipo(String(dati.anticipoBeep));
               Alert.alert('Dati ripristinati');
             },

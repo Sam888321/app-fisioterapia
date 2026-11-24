@@ -21,6 +21,7 @@ export function nuovaSessione(a: SessioneAttiva, es: Esercizio, esito: 'completa
     ripetizioni: es.ripetizioni,
     tenutaSecondi: es.tenutaSecondi,
     riposoSecondi: es.riposoSecondi,
+    obiettivo: es.voltePerGiorno ?? 1,
   };
 }
 

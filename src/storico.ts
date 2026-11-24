@@ -68,9 +68,27 @@ function coloreEsito(completate: number, interrotte: number, obiettivo: number, 
   return eOggi ? 'da-fare' : 'rosso';
 }
 
+// Indice per giorno, uno per array: calendario, serie e grafici chiedono decine di giorni a ogni rendering.
+// ponytail: chiave = identità dell'array (le sessioni si ricaricano, non si modificano sul posto).
+const indice = new WeakMap<Sessione[], Map<string, Sessione[]>>();
+
+export function sessioniDelGiorno(sessioni: Sessione[], data: string): Sessione[] {
+  let m = indice.get(sessioni);
+  if (!m) {
+    m = new Map();
+    for (const s of sessioni) {
+      const g = giornoLocale(new Date(s.inizio));
+      const lista = m.get(g);
+      if (lista) lista.push(s);
+      else m.set(g, [s]);
+    }
+    indice.set(sessioni, m);
+  }
+  return m.get(data) ?? [];
+}
+
 export function riquadriGiorno(esercizi: Esercizio[], sessioni: Sessione[], data: string, oggi: string): Riquadro[] {
-  const delGiorno = sessioni
-    .filter((s) => giornoLocale(new Date(s.inizio)) === data)
+  const delGiorno = sessioniDelGiorno(sessioni, data)
     .map((s) => normalizza(s, esercizi))
     .sort((a, b) => a.inizio.localeCompare(b.inizio));
   const ids = new Set([...esercizi.filter((e) => e.creatoIl <= data).map((e) => e.id), ...delGiorno.map((s) => s.esercizioId)]);
@@ -80,7 +98,8 @@ export function riquadriGiorno(esercizi: Esercizio[], sessioni: Sessione[], data
       const sue = delGiorno.filter((s) => s.esercizioId === id);
       const completate = sue.filter((s) => s.esito === 'completato').length;
       const interrotte = sue.length - completate;
-      const obiettivo = es?.voltePerGiorno ?? 1;
+      // Il minimo di allora (copia nelle sessioni dalla 1.2.0), altrimenti quello attuale.
+      const obiettivo = sue.findLast((s) => s.obiettivo !== undefined)?.obiettivo ?? es?.voltePerGiorno ?? 1;
       const ultima = sue.filter((s) => s.esito === 'interrotto').at(-1);
       const dolori = sue.flatMap((s) => (s.dolore === undefined ? [] : [s.dolore]));
       const rif = es ?? sue.find((s) => s.ripetizioni !== undefined && s.tenutaSecondi !== undefined);

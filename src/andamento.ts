@@ -1,4 +1,4 @@
-import { giornoLocale, misura, normalizza, SessioneNorm, spostaGiorno, tenutaFattaMs } from './storico';
+import { giornoLocale, misura, normalizza, sessioniDelGiorno, SessioneNorm, spostaGiorno, tenutaFattaMs } from './storico';
 import { Dolore, Esercizio, Sessione } from './tipi';
 
 export type Vista = 'giorno' | 'settimana' | 'mese';
@@ -30,8 +30,8 @@ export function sposta(vista: Vista, riferimento: string, delta: number): string
 }
 
 const sueDelGiorno = (es: Esercizio, sessioni: Sessione[], esercizi: Esercizio[], data: string): SessioneNorm[] =>
-  sessioni
-    .filter((s) => s.esercizioId === es.id && giornoLocale(new Date(s.inizio)) === data)
+  sessioniDelGiorno(sessioni, data)
+    .filter((s) => s.esercizioId === es.id)
     .map((s) => normalizza(s, esercizi))
     .sort((a, b) => a.inizio.localeCompare(b.inizio));
 
@@ -40,6 +40,7 @@ export interface Barra {
   completato: number; // ms di tenuta (misura a tempo) o numero di volte
   interrotto: number;
   doloreMax?: Dolore;
+  obiettivo?: number; // minimo salvato nelle sessioni di quel giorno
 }
 
 export function barre(es: Esercizio, sessioni: Sessione[], esercizi: Esercizio[], vista: 'settimana' | 'mese', riferimento: string, oggi: string) {
@@ -50,17 +51,26 @@ export function barre(es: Esercizio, sessioni: Sessione[], esercizi: Esercizio[]
     const sue = sueDelGiorno(es, sessioni, esercizi, data);
     const somma = (esito: SessioneNorm['esito']) => sue.filter((s) => s.esito === esito).reduce((t, s) => t + valore(s), 0);
     const dolori = sue.flatMap((s) => (s.dolore === undefined ? [] : [s.dolore]));
-    return { data, completato: somma('completato'), interrotto: somma('interrotto'), ...(dolori.length && { doloreMax: Math.max(...dolori) as Dolore }) };
+    const obiettivo = sue.findLast((s) => s.obiettivo !== undefined)?.obiettivo;
+    return {
+      data,
+      completato: somma('completato'),
+      interrotto: somma('interrotto'),
+      ...(dolori.length && { doloreMax: Math.max(...dolori) as Dolore }),
+      ...(obiettivo !== undefined && { obiettivo }),
+    };
   });
   const obiettivo = es.voltePerGiorno ?? 1;
-  const minimo = aTempo ? obiettivo * es.tenutaSecondi * 1000 : obiettivo;
+  const minimoDi = (ob: number) => (aTempo ? ob * es.tenutaSecondi * 1000 : ob);
+  const minimo = minimoDi(obiettivo); // la linea tratteggiata: il minimo attuale
   const validi = lista.filter((b) => b.data >= es.creatoIl && b.data <= oggi);
   const tot = (b: Barra) => b.completato + b.interrotto;
   return {
     barre: lista,
     minimo,
     media: validi.length ? validi.reduce((t, b) => t + tot(b), 0) / validi.length : 0,
-    giorniSopra: validi.filter((b) => b.completato >= minimo).length, // come i colori dello Storico: le interrotte non bastano
+    // Come i colori dello Storico: solo le completate, e col minimo di quel giorno.
+    giorniSopra: validi.filter((b) => b.completato >= minimoDi(b.obiettivo ?? obiettivo)).length,
     giorniValidi: validi.length,
   };
 }

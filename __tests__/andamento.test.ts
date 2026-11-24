@@ -65,3 +65,8 @@ test('sopra il minimo contano solo le completate (come i colori dello Storico)',
   const ss = [ses(fless, d(18, 9)), ses(fless, d(18, 10), { esito: 'interrotto', ripetizioniFatte: 2 })];
   expect(barre(fless, ss, [fless], 'settimana', OGGI, OGGI).giorniSopra).toBe(0);
 });
+
+test('sopra il minimo usa il minimo salvato quel giorno', () => {
+  const ss = [ses(tutore, d(18, 9), { obiettivo: 2 }), ses(tutore, d(18, 12), { obiettivo: 2 })];
+  expect(barre({ ...tutore, voltePerGiorno: 3 }, ss, [tutore], 'settimana', OGGI, OGGI).giorniSopra).toBe(1);
+});

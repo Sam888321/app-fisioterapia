@@ -76,11 +76,14 @@ export async function salvaAnticipo(ms: number): Promise<void> {
   await scrivi('anticipoBeep', ms);
 }
 
-// Ripristino da backup: la sessione attiva resta com'è.
-export async function sostituisciDati(d: { esercizi: Esercizio[]; sessioni: Sessione[]; anticipoBeep: number }): Promise<void> {
+// Ripristino da backup. Rifiutato con un esercizio in corso: i suoi id potrebbero non esistere più
+// e la Home lo scarterebbe, cancellando la sveglia (es. tutore).
+export async function sostituisciDati(d: { esercizi: Esercizio[]; sessioni: Sessione[]; anticipoBeep: number }): Promise<boolean> {
+  if (await caricaAttiva()) return false;
   await scrivi('esercizi', d.esercizi);
   await scrivi('sessioni', d.sessioni);
   await salvaAnticipo(d.anticipoBeep);
+  return true;
 }
 
 // Copia la foto nella cartella dell'app: resta anche se viene cancellata dalla galleria.
