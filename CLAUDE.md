@@ -4,7 +4,7 @@ App Android personale di Samu (non FOR J): timer programmabile per gli esercizi 
 
 ## Contesto vivo (ultimo aggiornamento 2026-11-24)
 
-**Repo:** git locale, nessun remote. Si lavora su `main`. Commit senza alcuna attribuzione a Claude (niente `Co-Authored-By`).
+**Repo:** GitHub personale di Samu, `https://github.com/Sam888321/app-fisioterapia` (remote `origin`), branch `main`. Commit senza alcuna attribuzione a Claude (niente `Co-Authored-By`). **Identità git:** il `git config` globale del PC è quello di lavoro (FOR J, GitLab); questo repo ha nome/email personali impostati in locale (`git config user.name/user.email`) — non toglierli e non committare con l'identità globale. Storia riscritta il 2026-11-24 per togliere l'email di lavoro dai commit, prima del primo push.
 
 **Stack:** Expo SDK 58, React Native 0.88, React 19.3, TypeScript 6, expo-router (route in `src/app/`). Moduli: expo-notifications, expo-audio, expo-image-picker, expo-file-system, expo-keep-awake, AsyncStorage, @expo/vector-icons. Test con jest + jest-expo.
 
