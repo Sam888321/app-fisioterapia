@@ -1,4 +1,4 @@
-import { giornoLocale, misura, normalizza, ripetizioneRaggiunta, tenutaFattaMs } from '../src/storico';
+import { coloreGiorno, coloriMese, giornoLocale, misura, normalizza, riquadriGiorno, ripetizioneRaggiunta, serie, tenutaFattaMs } from '../src/storico';
 import { Esercizio, Sessione } from '../src/tipi';
 
 const fless: Esercizio = { id: 'A', nome: 'Flessione dito', immagine: { tipo: 'icona', nome: 'x' }, ripetizioni: 10, tenutaSecondi: 5, riposoSecondi: 2, creatoIl: '2026-11-18' };
@@ -52,4 +52,88 @@ test('ripetizioneRaggiunta e tenutaFattaMs con tenuta interrotta', () => {
   const f = normalizza(ses({ esito: 'interrotto', ripetizioniFatte: 6, restanteMs: 2000 }), [fless]);
   expect(ripetizioneRaggiunta(f)).toBe(7);
   expect(tenutaFattaMs(f)).toBe(33_000);
+});
+
+describe('riquadri, colori e serie', () => {
+  const OGGI = '2026-11-20';
+  const A = { ...fless, voltePerGiorno: 2 }; // Flessione, minimo 2
+  const B = tutore; // nessun obiettivo: minimo 1
+  let k = 0;
+  const alle = (g: number, h: number, x: Partial<Sessione> = {}): Sessione =>
+    ses({ id: `k${k++}`, inizio: new Date(2026, 10, g, h, 0).toISOString(), ...x });
+  const fl = (g: number, h: number, x: Partial<Sessione> = {}) => alle(g, h, x);
+  const tu = (g: number, h: number, x: Partial<Sessione> = {}) => alle(g, h, { esercizioId: 'B', nomeEsercizio: 'Tutore', ripetizioniFatte: 1, ...x });
+  const riq = (ss: Sessione[], data: string, nome: string) => riquadriGiorno([A, B], ss, data, OGGI).find((r) => r.nome === nome)!;
+
+  test('verde con il minimo raggiunto, anche con una interrotta in più', () => {
+    const ss = [fl(19, 9), fl(19, 12), fl(19, 15, { esito: 'interrotto', ripetizioniFatte: 3 })];
+    expect(riq(ss, '2026-11-19', 'Flessione dito')).toMatchObject({ colore: 'verde', completate: 2, interrotte: 1, obiettivo: 2, misura: 'volte' });
+  });
+
+  test('arancione sotto il minimo o solo interrotte; rosso se niente', () => {
+    expect(riq([fl(19, 9)], '2026-11-19', 'Flessione dito').colore).toBe('arancione');
+    expect(riq([tu(19, 9, { esito: 'interrotto', ripetizioniFatte: 0, restanteMs: 300_000 })], '2026-11-19', 'Tutore').colore).toBe('arancione');
+    expect(riq([], '2026-11-19', 'Tutore').colore).toBe('rosso');
+  });
+
+  test('oggi non è mai rosso', () => {
+    expect(riq([], OGGI, 'Tutore').colore).toBe('da-fare');
+    expect(coloreGiorno(riquadriGiorno([A, B], [], OGGI, OGGI), OGGI, OGGI)).toBe('in-corso');
+    const tutto = [fl(20, 9), fl(20, 10), tu(20, 11)];
+    expect(coloreGiorno(riquadriGiorno([A, B], tutto, OGGI, OGGI), OGGI, OGGI)).toBe('verde');
+  });
+
+  test('prima della creazione niente', () => {
+    const nuovo = { ...B, id: 'C', nome: 'Nuovo', creatoIl: '2026-11-21' };
+    expect(riquadriGiorno([A, nuovo], [], '2026-11-19', OGGI).map((r) => r.nome)).toEqual(['Flessione dito']);
+    expect(riquadriGiorno([A], [], '2026-11-17', OGGI)).toEqual([]);
+    expect(coloreGiorno([], '2026-11-17', OGGI)).toBeNull();
+  });
+
+  test('riquadri con sessioni vecchie: annullato conta come interrotto', () =>
+    expect(riq([fl(19, 9, { esito: 'annullato', ripetizioniFatte: 4 })], '2026-11-19', 'Flessione dito')).toMatchObject({ interrotte: 1, completate: 0, colore: 'arancione' }));
+
+  test('esercizio eliminato con sessioni resta, col nome salvato e senza immagine', () => {
+    const r = riquadriGiorno([A], [alle(19, 9, { esercizioId: 'X', nomeEsercizio: 'Vecchio' })], '2026-11-19', OGGI).find((x) => x.esercizioId === 'X');
+    expect(r).toMatchObject({ nome: 'Vecchio', completate: 1 });
+    expect(r!.immagine).toBeUndefined();
+  });
+
+  test('riquadro del tutore: tempo, ultima interrotta, dolore massimo', () => {
+    const ss = [
+      tu(19, 8, { tenutaSecondi: 3600, ripetizioni: 1, dolore: 1 }),
+      tu(19, 11, { tenutaSecondi: 3600, ripetizioni: 1 }),
+      tu(19, 15, { esito: 'interrotto', ripetizioniFatte: 0, restanteMs: 300_000, tenutaSecondi: 3600, ripetizioni: 1, dolore: 2 }),
+    ];
+    expect(riq(ss, '2026-11-19', 'Tutore')).toMatchObject({
+      misura: 'tempo', completate: 2, interrotte: 1, tenutaMs: 2 * 3_600_000 + 3_300_000,
+      ultimaInterrotta: { raggiunta: 1, ripetizioni: 1, restanteMs: 300_000 }, doloreMax: 2, colore: 'verde',
+    });
+    expect(riq([tu(19, 8)], '2026-11-19', 'Tutore').doloreMax).toBeUndefined();
+  });
+
+  test('colore del giorno = il peggiore', () => {
+    const ss = [fl(19, 9), fl(19, 10), tu(19, 11)];
+    expect(coloreGiorno(riquadriGiorno([A, B], ss, '2026-11-19', OGGI), '2026-11-19', OGGI)).toBe('verde');
+    expect(coloreGiorno(riquadriGiorno([A, B], ss.slice(1), '2026-11-19', OGGI), '2026-11-19', OGGI)).toBe('arancione');
+    expect(coloreGiorno(riquadriGiorno([A, B], ss.slice(2), '2026-11-19', OGGI), '2026-11-19', OGGI)).toBe('rosso');
+  });
+
+  const pieno = (g: number) => [fl(g, 9), fl(g, 10), tu(g, 11)];
+  test('serie di giorni verdi', () => {
+    // creati il 18: 18, 19 verdi; oggi (20) in corso → 2
+    expect(serie([A, B], [...pieno(18), ...pieno(19)], OGGI)).toBe(2);
+    expect(serie([A, B], [...pieno(18), ...pieno(19), ...pieno(20)], OGGI)).toBe(3);
+    expect(serie([A, B], [...pieno(18), fl(19, 9), ...pieno(20)], OGGI)).toBe(1); // il 19 arancione interrompe
+    expect(serie([A, B], [], OGGI)).toBe(0);
+  });
+
+  test('coloriMese: solo fino a oggi, niente prima della creazione', () => {
+    const c = coloriMese([A, B], pieno(19), 2026, 10, OGGI);
+    expect(c['2026-11-17']).toBeUndefined();
+    expect(c['2026-11-18']).toBe('rosso');
+    expect(c['2026-11-19']).toBe('verde');
+    expect(c['2026-11-20']).toBe('in-corso');
+    expect(c['2026-11-21']).toBeUndefined();
+  });
 });
