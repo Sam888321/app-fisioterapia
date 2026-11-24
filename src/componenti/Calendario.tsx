@@ -75,5 +75,5 @@ const s = StyleSheet.create({
   giorno: { alignItems: 'center', justifyContent: 'center', width: 42, height: 46, borderRadius: 12 },
   scelto: { backgroundColor: colori.primarioChiaro },
   numero: { fontSize: 16, color: colori.testo },
-  pallino: { width: 9, height: 9, borderRadius: 999, marginTop: 3 },
+  pallino: { width: 10, height: 10, borderRadius: 5, marginTop: 3 }, // raggio = metà lato: 999 su Android resta quadrato
 });

@@ -2,7 +2,7 @@ jest.mock('@react-native-async-storage/async-storage', () => require('@react-nat
 jest.mock('expo-file-system', () => ({}));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { aggiornaSessione, aggiungiSessione, caricaAnticipo, caricaAttiva, caricaEsercizi, caricaSessioni, eliminaEsercizio, nuovoId, salvaAnticipo, salvaAttiva, salvaEsercizio } from '../src/archivio';
+import { aggiornaSessione, aggiungiSessione, caricaAnticipo, caricaAttiva, caricaEsercizi, caricaSessioni, eliminaEsercizio, nuovoId, salvaAnticipo, salvaAttiva, salvaEsercizio, sostituisciDati } from '../src/archivio';
 import { validaEsercizio } from '../src/tipi';
 
 beforeEach(() => AsyncStorage.clear());
@@ -76,4 +76,16 @@ test('aggiornaSessione modifica solo quella sessione', async () => {
   await aggiungiSessione({ ...s, id: 's2' });
   await aggiornaSessione('s2', { dolore: 2 });
   expect(await caricaSessioni()).toEqual([{ ...s, id: 's1' }, { ...s, id: 's2', dolore: 2 }]);
+});
+
+test('sostituisciDati sovrascrive esercizi, sessioni e anticipo ma non la sessione attiva', async () => {
+  const attiva = { esercizioId: 'A', inizio: 'x', stato: { fase: 'pausa' as const, ripetizione: 1, restanteMs: 1, faseSospesa: 'tenuta' as const }, notificaId: null };
+  await salvaAttiva(attiva);
+  await caricaEsercizi(); // crea i seed
+  const nuovo = { id: 'N', nome: 'Nuovo', immagine: { tipo: 'icona' as const, nome: 'x' }, ripetizioni: 1, tenutaSecondi: 5, creatoIl: '2026-11-24' };
+  await sostituisciDati({ esercizi: [nuovo], sessioni: [], anticipoBeep: 90 });
+  expect(await caricaEsercizi()).toEqual([nuovo]);
+  expect(await caricaSessioni()).toEqual([]);
+  expect(await caricaAnticipo()).toBe(90);
+  expect(await caricaAttiva()).toEqual(attiva);
 });

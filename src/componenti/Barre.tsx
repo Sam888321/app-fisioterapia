@@ -66,6 +66,6 @@ const s = StyleSheet.create({
   etichettaMinimo: { position: 'absolute', right: 0, fontSize: 11, color: colori.tenue },
   riga: { flexDirection: 'row', marginTop: 4 },
   colonnaTesto: { flex: 1, alignItems: 'center' },
-  pallino: { width: 7, height: 7, borderRadius: 999, marginBottom: 2 },
+  pallino: { width: 8, height: 8, borderRadius: 4, marginBottom: 2 },
   giorno: { fontSize: 12, color: colori.tenue },
 });

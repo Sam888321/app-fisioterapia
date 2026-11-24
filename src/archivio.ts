@@ -76,6 +76,13 @@ export async function salvaAnticipo(ms: number): Promise<void> {
   await scrivi('anticipoBeep', ms);
 }
 
+// Ripristino da backup: la sessione attiva resta com'è.
+export async function sostituisciDati(d: { esercizi: Esercizio[]; sessioni: Sessione[]; anticipoBeep: number }): Promise<void> {
+  await scrivi('esercizi', d.esercizi);
+  await scrivi('sessioni', d.sessioni);
+  await salvaAnticipo(d.anticipoBeep);
+}
+
 // Copia la foto nella cartella dell'app: resta anche se viene cancellata dalla galleria.
 export async function copiaFoto(uriTemporaneo: string): Promise<string> {
   const dir = new Directory(Paths.document, 'foto');

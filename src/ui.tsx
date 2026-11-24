@@ -1,4 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { Image, View } from 'react-native';
 import { Dolore, Immagine } from './tipi';
 
@@ -26,12 +27,15 @@ export const DOLORI: { valore: Dolore; nome: string; icona: keyof typeof Materia
 ];
 
 export function ImmagineEsercizio({ immagine, size }: { immagine: Immagine; size: number }) {
-  if (immagine.tipo === 'foto') {
-    return <Image source={{ uri: immagine.uri }} style={{ width: size, height: size, borderRadius: size / 6 }} />;
+  // Foto non più sul telefono (es. dati ripristinati da backup, che non include le foto): icona al suo posto.
+  const [mancante, setMancante] = useState<string | null>(null);
+  if (immagine.tipo === 'foto' && mancante !== immagine.uri) {
+    return <Image source={{ uri: immagine.uri }} onError={() => setMancante(immagine.uri)} style={{ width: size, height: size, borderRadius: size / 6 }} />;
   }
+  const icona = immagine.tipo === 'foto' ? 'image-off-outline' : immagine.nome;
   return (
     <View style={{ width: size, height: size, borderRadius: size / 6, backgroundColor: colori.primarioChiaro, alignItems: 'center', justifyContent: 'center' }}>
-      <MaterialCommunityIcons name={immagine.nome as keyof typeof MaterialCommunityIcons.glyphMap} size={size * 0.6} color={colori.accento} />
+      <MaterialCommunityIcons name={icona as keyof typeof MaterialCommunityIcons.glyphMap} size={size * 0.6} color={colori.accento} />
     </View>
   );
 }
