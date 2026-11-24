@@ -70,3 +70,10 @@ test('sopra il minimo usa il minimo salvato quel giorno', () => {
   const ss = [ses(tutore, d(18, 9), { obiettivo: 2 }), ses(tutore, d(18, 12), { obiettivo: 2 })];
   expect(barre({ ...tutore, voltePerGiorno: 3 }, ss, [tutore], 'settimana', OGGI, OGGI).giorniSopra).toBe(1);
 });
+
+test('i giorni in pausa non contano tra i validi e sono segnati', () => {
+  const p = { ...fless, pause: [{ da: '2026-11-18', a: '2026-11-19' }] };
+  const r = barre(p, [], [p], 'settimana', OGGI, OGGI);
+  expect(r.giorniValidi).toBe(2); // 17 e 20
+  expect(r.barre.filter((b) => b.pausa).map((b) => b.data)).toEqual(['2026-11-18', '2026-11-19']);
+});

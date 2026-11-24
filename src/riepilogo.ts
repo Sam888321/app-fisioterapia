@@ -15,10 +15,18 @@ export function testoRiepilogo(esercizi: Esercizio[], sessioni: Sessione[], gior
   let completi = 0;
   for (let i = 0; i < giorni; i++) {
     const data = spostaGiorno(oggi, -i);
-    const riquadri = riquadriGiorno(esercizi, sessioni, data, oggi);
-    if (!riquadri.length) continue;
-    conDati++;
-    if (coloreGiorno(riquadri, data, oggi) === 'verde') completi++;
+    const tutti = riquadriGiorno(esercizi, sessioni, data, oggi);
+    if (!tutti.length) continue;
+    const colore = coloreGiorno(tutti, data, oggi);
+    // In pausa senza sessioni: non compare.
+    const riquadri = tutti.filter((r) => r.colore !== 'pausa' || r.completate + r.interrotte > 0);
+    const settimana = daData(data).toLocaleDateString('it-IT', { weekday: 'short' });
+    if (colore === 'pausa' && !riquadri.length) {
+      righe.push(`${settimana} ${breve(data)} — in pausa`);
+      continue;
+    }
+    if (colore !== 'pausa') conDati++;
+    if (colore === 'verde') completi++;
     const parti = riquadri.map((r) => {
       const n = r.completate + r.interrotte;
       return `${r.nome}: ${plurale(n, 'volta', 'volte')}`
@@ -27,7 +35,6 @@ export function testoRiepilogo(esercizi: Esercizio[], sessioni: Sessione[], gior
     });
     const dolori = riquadri.flatMap((r) => (r.doloreMax === undefined ? [] : [r.doloreMax]));
     if (dolori.length) parti.push(`dolore max: ${DOLORI[Math.max(...dolori)].nome}`);
-    const settimana = daData(data).toLocaleDateString('it-IT', { weekday: 'short' });
     righe.push(`${settimana} ${breve(data)} — ${parti.join(' · ')}`);
   }
   const testa = [

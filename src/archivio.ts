@@ -41,6 +41,10 @@ export async function salvaEsercizio(e: Esercizio): Promise<void> {
   await scrivi('esercizi', tutti);
 }
 
+export async function salvaTuttiEsercizi(e: Esercizio[]): Promise<void> {
+  await scrivi('esercizi', e);
+}
+
 export async function eliminaEsercizio(id: string): Promise<void> {
   await scrivi('esercizi', (await caricaEsercizi()).filter((x) => x.id !== id));
 }

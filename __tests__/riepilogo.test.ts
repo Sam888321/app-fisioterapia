@@ -29,3 +29,12 @@ test('senza dati: solo intestazione e sintesi', () =>
     'Fisioterapia — ultimi 30 giorni (dal 22/10 al 20/11)',
     'Serie: 0 giorni di fila · giorni completi: 0 su 0',
   ]));
+
+test('riepilogo: giorni tutti in pausa e esercizi in pausa senza sessioni', () => {
+  const Bp = { ...B, pause: [{ da: '2026-11-19' }] };
+  const Ap = { ...A, pause: [{ da: '2026-11-19', a: '2026-11-19' }] };
+  const righe = testoRiepilogo([Ap, Bp], [ses(A, 20, 9)], 7, '2026-11-20').split('\n');
+  expect(righe).toContain('ven 20/11 — Flessione dito: 1 volta'); // il tutore in pausa senza sessioni non compare
+  expect(righe).toContain('gio 19/11 — in pausa');
+  expect(righe[1]).toBe('Serie: 0 giorni di fila · giorni completi: 0 su 1');
+});

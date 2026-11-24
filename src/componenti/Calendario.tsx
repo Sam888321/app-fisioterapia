@@ -11,6 +11,7 @@ const TINTA: Record<Exclude<ColoreGiorno, null>, string> = {
   arancione: colori.arancione,
   rosso: colori.rosso,
   'in-corso': colori.tenue,
+  pausa: colori.grigio,
 };
 
 interface Props {

@@ -3,11 +3,11 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useHeaderHeight } from 'expo-router/react-navigation';
-import { Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caricaEsercizi, copiaFoto, eliminaEsercizio, nuovoId, salvaEsercizio } from '../../archivio';
 import { ICONE } from '../../icone';
-import { giornoLocale } from '../../storico';
+import { giornoLocale, inPausa, mettiInPausa, riprendi } from '../../storico';
 import { Esercizio, Immagine, validaEsercizio } from '../../tipi';
 import { colori, ImmagineEsercizio } from '../../ui';
 
@@ -24,6 +24,7 @@ export default function ModificaEsercizio() {
   const [unita, setUnita] = useState<'s' | 'min'>('s');
   const [riposo, setRiposo] = useState('');
   const [volte, setVolte] = useState('');
+  const [pausa, setPausa] = useState(false);
 
   useEffect(() => {
     if (nuovo) return;
@@ -39,6 +40,7 @@ export default function ModificaEsercizio() {
       setUnita(inMinuti ? 'min' : 's');
       setRiposo(e.riposoSecondi ? String(e.riposoSecondi) : '');
       setVolte(e.voltePerGiorno ? String(e.voltePerGiorno) : '');
+      setPausa(inPausa(e, giornoLocale(new Date())));
     });
   }, [id, nuovo]);
 
@@ -56,7 +58,8 @@ export default function ModificaEsercizio() {
 
   async function salva() {
     if (errore) return;
-    await salvaEsercizio({
+    const oggi = giornoLocale(new Date());
+    const es: Esercizio = {
       id: originale?.id ?? nuovoId(),
       nome: nome.trim(),
       immagine,
@@ -64,8 +67,10 @@ export default function ModificaEsercizio() {
       tenutaSecondi: Number(tenuta) * (unita === 'min' ? 60 : 1),
       ...(Number(riposo) > 0 && { riposoSecondi: Number(riposo) }),
       ...(volte.trim() && { voltePerGiorno: Number(volte) }),
-      creatoIl: originale?.creatoIl ?? giornoLocale(new Date()),
-    });
+      creatoIl: originale?.creatoIl ?? oggi,
+      ...(originale?.pause && { pause: originale.pause }),
+    };
+    await salvaEsercizio(pausa ? mettiInPausa(es, oggi) : riprendi(es, oggi));
     router.back();
   }
 
@@ -122,6 +127,16 @@ export default function ModificaEsercizio() {
         <Text style={s.etichetta}>Volte al giorno (facoltativo)</Text>
         <TextInput style={s.input} value={volte} onChangeText={setVolte} keyboardType="number-pad" placeholder="—" />
 
+        {originale && (
+          <View style={s.pausa}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.pausaTitolo}>In pausa</Text>
+              <Text style={s.pausaTesto}>Da oggi i giorni senza questo esercizio non contano come saltati.</Text>
+            </View>
+            <Switch value={pausa} onValueChange={setPausa} trackColor={{ false: colori.bordo, true: colori.primario }} thumbColor={pausa ? colori.accento : colori.tenue} />
+          </View>
+        )}
+
         {errore && <Text style={s.errore}>{errore}</Text>}
         <Pressable style={[s.salva, errore && { opacity: 0.4 }]} disabled={!!errore} onPress={salva}>
           <Text style={s.salvaTesto}>Salva</Text>
@@ -158,6 +173,9 @@ const s = StyleSheet.create({
   unitaScelta: { backgroundColor: colori.primario, borderColor: colori.primario },
   unitaTesto: { fontSize: 16, color: colori.testo, fontWeight: '600' },
   errore: { color: colori.rosso, marginTop: 16, fontSize: 15 },
+  pausa: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colori.card, borderRadius: 12, padding: 14, marginTop: 24 },
+  pausaTitolo: { fontSize: 17, fontWeight: '600', color: colori.testo },
+  pausaTesto: { fontSize: 14, color: colori.tenue, marginTop: 2 },
   salva: { backgroundColor: colori.primario, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 24 },
   salvaTesto: { color: '#fff', fontSize: 18, fontWeight: '700' },
   elimina: { alignItems: 'center', paddingVertical: 16, marginTop: 8 },

@@ -16,6 +16,7 @@ export const colori = {
   rosso: '#F06A6A',
   arancione: '#F0A04B',
   giallo: '#E3C35A',
+  grigio: '#5E6E82', // pausa
   bordo: '#253246',
 };
 

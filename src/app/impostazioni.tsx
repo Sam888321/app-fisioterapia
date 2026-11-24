@@ -2,19 +2,38 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Directory, File } from 'expo-file-system';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
-import { caricaAnticipo, caricaAttiva, caricaEsercizi, caricaSessioni, salvaAnticipo, sostituisciDati } from '../archivio';
+import { caricaAnticipo, caricaAttiva, caricaEsercizi, caricaSessioni, salvaAnticipo, salvaTuttiEsercizi, sostituisciDati } from '../archivio';
 import { creaBackup, leggiBackup } from '../backup';
-import { giornoLocale } from '../storico';
+import { giornoLocale, inPausa, mettiInPausa, riprendi } from '../storico';
 import { colori } from '../ui';
 
 const annullato = (e: unknown) => /cancel/i.test(String(e));
 
 export default function Impostazioni() {
   const [anticipo, setAnticipo] = useState('');
+  const [tuttiInPausa, setTuttiInPausa] = useState(false);
+
+  const leggiPausa = () =>
+    caricaEsercizi().then((e) => setTuttiInPausa(e.length > 0 && e.every((x) => inPausa(x, giornoLocale(new Date())))));
 
   useEffect(() => {
     caricaAnticipo().then((v) => setAnticipo(String(v)));
+    leggiPausa();
   }, []);
+
+  async function cambiaPausaTutti() {
+    const oggi = giornoLocale(new Date());
+    const applica = async () => {
+      const esercizi = await caricaEsercizi();
+      await salvaTuttiEsercizi(esercizi.map((e) => (tuttiInPausa ? riprendi(e, oggi) : mettiInPausa(e, oggi))));
+      await leggiPausa();
+    };
+    if (tuttiInPausa) return applica();
+    Alert.alert('Mettere in pausa tutti gli esercizi?', 'Da oggi i giorni senza esercizi non conteranno come saltati, finché non riprendi.', [
+      { text: 'Annulla', style: 'cancel' },
+      { text: 'Metti in pausa', onPress: applica },
+    ]);
+  }
 
   const valido = /^\d+$/.test(anticipo) && Number(anticipo) <= 1000;
 
@@ -96,6 +115,15 @@ ${esercizi.length} esercizi, ${sessioni.length} sessioni.`);
       </Pressable>
       <Text style={s.aiuto}>
         Esporta salva esercizi, storico e impostazioni in un file (per esempio su Drive o nei Download). Importa li sostituisce con quelli del file. Le foto non sono incluse: dopo un ripristino su un altro telefono vanno rimesse.
+      </Text>
+
+      <Text style={[s.etichetta, { marginTop: 32 }]}>Terapia</Text>
+      <Pressable style={s.bottone} onPress={cambiaPausaTutti}>
+        <MaterialCommunityIcons name={tuttiInPausa ? 'play-circle-outline' : 'pause-circle-outline'} size={22} color={colori.accento} />
+        <Text style={s.bottoneTesto}>{tuttiInPausa ? 'Riprendi tutto' : 'Metti in pausa tutto'}</Text>
+      </Pressable>
+      <Text style={s.aiuto}>
+        Per quando la terapia finisce o il fisioterapista dice di fermarsi. I giorni in pausa restano grigi nello Storico e non interrompono la serie. Un singolo esercizio si mette in pausa dalla sua schermata Modifica.
       </Text>
     </ScrollView>
   );

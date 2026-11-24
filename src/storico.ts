@@ -45,7 +45,26 @@ export function tenutaFattaMs(s: SessioneNorm): number | null {
 }
 
 export type ColoreEsito = 'verde' | 'arancione' | 'rosso';
-export type ColoreGiorno = ColoreEsito | 'in-corso' | null;
+export type ColoreGiorno = ColoreEsito | 'in-corso' | 'pausa' | null; // 'pausa': tutti gli esercizi in pausa
+
+export function inPausa(e: Esercizio, data: string): boolean {
+  return (e.pause ?? []).some((p) => p.da <= data && (p.a === undefined || data <= p.a));
+}
+
+// La pausa parte da oggi; riprendere la chiude a ieri (oggi torna a contare). Iniziata e finita oggi = nessuna pausa.
+export function mettiInPausa(e: Esercizio, oggi: string): Esercizio {
+  if (inPausa(e, oggi)) return e;
+  return { ...e, pause: [...(e.pause ?? []), { da: oggi }] };
+}
+
+export function riprendi(e: Esercizio, oggi: string): Esercizio {
+  if (!(e.pause ?? []).some((p) => p.a === undefined)) return e;
+  const ieri = spostaGiorno(oggi, -1);
+  return {
+    ...e,
+    pause: e.pause!.flatMap((p) => (p.a !== undefined ? [p] : ieri < p.da ? [] : [{ da: p.da, a: ieri }])),
+  };
+}
 
 export interface Riquadro {
   esercizioId: string;
@@ -58,7 +77,7 @@ export interface Riquadro {
   tenutaMs: number; // tenuta fatta nel giorno (le sconosciute contano 0)
   ultimaInterrotta?: { raggiunta: number; ripetizioni?: number; restanteMs: number };
   doloreMax?: Dolore;
-  colore: ColoreEsito | 'da-fare'; // 'da-fare': oggi, niente ancora
+  colore: ColoreEsito | 'da-fare' | 'pausa'; // 'da-fare': oggi, niente ancora; 'pausa': non conta per il giorno
 }
 
 // Verde = minimo raggiunto (le interruzioni in più non tolgono il verde). Oggi non è mai rosso.
@@ -102,6 +121,7 @@ export function riquadriGiorno(esercizi: Esercizio[], sessioni: Sessione[], data
       const obiettivo = sue.findLast((s) => s.obiettivo !== undefined)?.obiettivo ?? es?.voltePerGiorno ?? 1;
       const ultima = sue.filter((s) => s.esito === 'interrotto').at(-1);
       const dolori = sue.flatMap((s) => (s.dolore === undefined ? [] : [s.dolore]));
+      const pausa = !!es && inPausa(es, data);
       const rif = es ?? sue.find((s) => s.ripetizioni !== undefined && s.tenutaSecondi !== undefined);
       return {
         esercizioId: id,
@@ -114,16 +134,17 @@ export function riquadriGiorno(esercizi: Esercizio[], sessioni: Sessione[], data
         tenutaMs: sue.reduce((t, s) => t + (tenutaFattaMs(s) ?? 0), 0),
         ...(ultima && { ultimaInterrotta: { raggiunta: ripetizioneRaggiunta(ultima), ripetizioni: ultima.ripetizioni, restanteMs: ultima.restanteMs } }),
         ...(dolori.length && { doloreMax: Math.max(...dolori) as Dolore }),
-        colore: coloreEsito(completate, interrotte, obiettivo, data === oggi),
+        colore: pausa ? 'pausa' : coloreEsito(completate, interrotte, obiettivo, data === oggi),
       };
     })
     .sort((a, b) => a.nome.localeCompare(b.nome));
 }
 
-// Il peggiore tra gli esercizi del giorno. Oggi: verde se è già tutto fatto, altrimenti "in corso".
+// Il peggiore tra gli esercizi attivi del giorno. Oggi: verde se è già tutto fatto, altrimenti "in corso".
 export function coloreGiorno(riquadri: Riquadro[], data: string, oggi: string): ColoreGiorno {
   if (!riquadri.length) return null;
-  const tutti = riquadri.map((r) => r.colore);
+  const tutti = riquadri.map((r) => r.colore).filter((c) => c !== 'pausa');
+  if (!tutti.length) return 'pausa';
   if (tutti.every((c) => c === 'verde')) return 'verde';
   if (data === oggi) return 'in-corso';
   return tutti.includes('rosso') ? 'rosso' : 'arancione';
@@ -146,10 +167,14 @@ export function spostaGiorno(data: string, delta: number): string {
   return giornoLocale(new Date(a, m - 1, g + delta));
 }
 
-// Giorni verdi di fila fino a ieri, più oggi se è già verde.
+// Giorni verdi di fila fino a ieri, più oggi se è già verde. I giorni di pausa si saltano.
 export function serie(esercizi: Esercizio[], sessioni: Sessione[], oggi: string): number {
   const colore = (d: string) => coloreGiorno(riquadriGiorno(esercizi, sessioni, d, oggi), d, oggi);
   let n = colore(oggi) === 'verde' ? 1 : 0;
-  for (let d = spostaGiorno(oggi, -1); colore(d) === 'verde'; d = spostaGiorno(d, -1)) n++;
-  return n;
+  for (let d = spostaGiorno(oggi, -1); ; d = spostaGiorno(d, -1)) {
+    const c = colore(d);
+    if (c === 'pausa') continue;
+    if (c !== 'verde') return n;
+    n++;
+  }
 }

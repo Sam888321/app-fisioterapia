@@ -1,4 +1,4 @@
-import { coloreGiorno, coloriMese, giornoLocale, misura, normalizza, riquadriGiorno, ripetizioneRaggiunta, serie, tenutaFattaMs } from '../src/storico';
+import { coloreGiorno, coloriMese, giornoLocale, inPausa, mettiInPausa, misura, normalizza, riprendi, riquadriGiorno, ripetizioneRaggiunta, serie, tenutaFattaMs } from '../src/storico';
 import { Esercizio, Sessione } from '../src/tipi';
 
 const fless: Esercizio = { id: 'A', nome: 'Flessione dito', immagine: { tipo: 'icona', nome: 'x' }, ripetizioni: 10, tenutaSecondi: 5, riposoSecondi: 2, creatoIl: '2026-11-18' };
@@ -154,4 +154,52 @@ test('storico veloce anche con un anno di dati', () => {
   expect(serie([A2], ss, '2026-11-19')).toBeGreaterThan(300);
   coloriMese([A2], ss, 2026, 10, '2026-11-19');
   expect(Date.now() - t0).toBeLessThan(250); // senza indice per giorno: ~1 s
+});
+
+describe('pausa', () => {
+  const OGGI = '2026-11-20';
+  const A = { ...fless, voltePerGiorno: 1, creatoIl: '2026-11-10' };
+  const B = { ...tutore, creatoIl: '2026-11-10' };
+  let k = 0;
+  const fatta = (es: Esercizio, g: number) => ses({ id: `p${k++}`, esercizioId: es.id, nomeEsercizio: es.nome, inizio: new Date(2026, 10, g, 9).toISOString() });
+
+  test('inPausa: periodi chiusi e aperti, estremi inclusi', () => {
+    const e = { ...A, pause: [{ da: '2026-11-12', a: '2026-11-14' }, { da: '2026-11-18' }] };
+    expect(['2026-11-11', '2026-11-12', '2026-11-14', '2026-11-15', '2026-11-18', '2026-11-30'].map((d) => inPausa(e, d)))
+      .toEqual([false, true, true, false, true, true]);
+    expect(inPausa(A, OGGI)).toBe(false);
+  });
+
+  test('mettiInPausa da oggi; riprendi chiude a ieri; stesso giorno = niente pausa', () => {
+    const p = mettiInPausa(A, '2026-11-15');
+    expect(p.pause).toEqual([{ da: '2026-11-15' }]);
+    expect(mettiInPausa(p, '2026-11-16')).toBe(p); // già in pausa
+    expect(riprendi(p, '2026-11-18').pause).toEqual([{ da: '2026-11-15', a: '2026-11-17' }]);
+    expect(riprendi(p, '2026-11-15').pause).toEqual([]);
+    expect(riprendi(A, OGGI)).toBe(A); // non era in pausa
+  });
+
+  test('esercizio in pausa senza sessioni non rende rosso il giorno; tutti in pausa = grigio', () => {
+    const Bp = { ...B, pause: [{ da: '2026-11-15' }] };
+    expect(coloreGiorno(riquadriGiorno([A, Bp], [fatta(A, 16)], '2026-11-16', OGGI), '2026-11-16', OGGI)).toBe('verde');
+    const Ap = { ...A, pause: [{ da: '2026-11-15' }] };
+    expect(coloreGiorno(riquadriGiorno([Ap, Bp], [], '2026-11-16', OGGI), '2026-11-16', OGGI)).toBe('pausa');
+    expect(coloreGiorno(riquadriGiorno([Ap, Bp], [], OGGI, OGGI), OGGI, OGGI)).toBe('pausa');
+  });
+
+  test('esercizio in pausa con sessioni: riquadro "pausa" che non pesa sul giorno', () => {
+    const Bp = { ...B, pause: [{ da: '2026-11-15' }] };
+    const rr = riquadriGiorno([A, Bp], [fatta(A, 16), fatta(B, 16)], '2026-11-16', OGGI);
+    expect(rr.find((r) => r.esercizioId === 'B')).toMatchObject({ colore: 'pausa', completate: 1 });
+    expect(coloreGiorno(rr, '2026-11-16', OGGI)).toBe('verde');
+  });
+
+  test('la serie salta i giorni di pausa', () => {
+    // 12-13 verdi, 14-17 tutto in pausa, 18-19 verdi, oggi in corso → 4
+    const per = (e: Esercizio) => ({ ...e, pause: [{ da: '2026-11-14', a: '2026-11-17' }] });
+    const ss = [12, 13, 18, 19].flatMap((g) => [fatta(A, g), fatta(B, g)]);
+    const e2 = [per(A), per(B)];
+    expect(serie(e2, ss, OGGI)).toBe(4);
+    expect(coloriMese(e2, ss, 2026, 10, OGGI)['2026-11-15']).toBe('pausa');
+  });
 });

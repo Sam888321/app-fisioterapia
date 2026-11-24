@@ -8,7 +8,8 @@ export interface Esercizio {
   tenutaSecondi: number;
   riposoSecondi?: number; // tra una ripetizione e l'altra; assente = 0
   voltePerGiorno?: number;
-  creatoIl: string; // YYYY-MM-DD locale
+  creatoIl: string;
+  pause?: { da: string; a?: string }[]; // giorni YYYY-MM-DD, estremi inclusi; senza `a` = ancora in pausa // YYYY-MM-DD locale
 }
 
 const intero = (s: string, min: number) => /^\d+$/.test(s.trim()) && Number(s) >= min;

@@ -1,4 +1,4 @@
-import { giornoLocale, misura, normalizza, sessioniDelGiorno, SessioneNorm, spostaGiorno, tenutaFattaMs } from './storico';
+import { giornoLocale, inPausa, misura, normalizza, sessioniDelGiorno, SessioneNorm, spostaGiorno, tenutaFattaMs } from './storico';
 import { Dolore, Esercizio, Sessione } from './tipi';
 
 export type Vista = 'giorno' | 'settimana' | 'mese';
@@ -41,6 +41,7 @@ export interface Barra {
   interrotto: number;
   doloreMax?: Dolore;
   obiettivo?: number; // minimo salvato nelle sessioni di quel giorno
+  pausa?: boolean; // l'esercizio era in pausa: il giorno non conta
 }
 
 export function barre(es: Esercizio, sessioni: Sessione[], esercizi: Esercizio[], vista: 'settimana' | 'mese', riferimento: string, oggi: string) {
@@ -58,12 +59,13 @@ export function barre(es: Esercizio, sessioni: Sessione[], esercizi: Esercizio[]
       interrotto: somma('interrotto'),
       ...(dolori.length && { doloreMax: Math.max(...dolori) as Dolore }),
       ...(obiettivo !== undefined && { obiettivo }),
+      ...(inPausa(es, data) && { pausa: true }),
     };
   });
   const obiettivo = es.voltePerGiorno ?? 1;
   const minimoDi = (ob: number) => (aTempo ? ob * es.tenutaSecondi * 1000 : ob);
   const minimo = minimoDi(obiettivo); // la linea tratteggiata: il minimo attuale
-  const validi = lista.filter((b) => b.data >= es.creatoIl && b.data <= oggi);
+  const validi = lista.filter((b) => b.data >= es.creatoIl && b.data <= oggi && !b.pausa);
   const tot = (b: Barra) => b.completato + b.interrotto;
   return {
     barre: lista,

@@ -7,7 +7,7 @@ import { caricaEsercizi, caricaSessioni } from '../archivio';
 import { Calendario } from '../componenti/Calendario';
 import { formatDurata } from '../formato';
 import { testoRiepilogo } from '../riepilogo';
-import { coloriMese, giornoLocale, Riquadro, riquadriGiorno, serie } from '../storico';
+import { coloreGiorno, coloriMese, giornoLocale, Riquadro, riquadriGiorno, serie } from '../storico';
 import { Esercizio, Sessione } from '../tipi';
 import { colori, DOLORI, ImmagineEsercizio } from '../ui';
 
@@ -52,7 +52,9 @@ export default function Storico() {
     ]);
   }
 
-  const riquadri = riquadriGiorno(esercizi, sessioni, scelto, oggi);
+  // In pausa senza sessioni: non serve un riquadro.
+  const riquadri = riquadriGiorno(esercizi, sessioni, scelto, oggi).filter((r) => r.colore !== 'pausa' || r.completate + r.interrotte > 0);
+  const tuttoInPausa = coloreGiorno(riquadriGiorno(esercizi, sessioni, scelto, oggi), scelto, oggi) === 'pausa';
   const giorniDiFila = serie(esercizi, sessioni, oggi);
 
   return (
@@ -84,7 +86,7 @@ export default function Storico() {
 
       <Text style={s.giorno}>{titoloGiorno(scelto, oggi)}</Text>
       {riquadri.length === 0 ? (
-        <Text style={s.vuoto}>Nessun esercizio in questo giorno</Text>
+        <Text style={s.vuoto}>{tuttoInPausa ? 'Esercizi in pausa' : 'Nessun esercizio in questo giorno'}</Text>
       ) : (
         <View style={s.griglia}>
           {riquadri.map((r) => (
@@ -106,12 +108,15 @@ const STATO = {
   arancione: { icona: 'circle-half-full', colore: colori.arancione },
   rosso: { icona: 'close-circle', colore: colori.rosso },
   'da-fare': { icona: 'circle-outline', colore: colori.tenue },
+  pausa: { icona: 'pause-circle', colore: colori.grigio },
 } as const;
 
 function Card({ r, eOggi, onPress }: { r: Riquadro; eOggi: boolean; onPress: () => void }) {
   const n = r.completate + r.interrotte;
   const volte = `${n} ${n === 1 ? 'volta' : 'volte'}`;
-  const principale = n === 0
+  const principale = r.colore === 'pausa'
+    ? `In pausa · ${volte}`
+    : n === 0
     ? `${eOggi ? 'Da fare' : 'Non fatto'} · min ${r.obiettivo}`
     : r.misura === 'tempo'
       ? `${formatDurata(r.tenutaMs)} · ${volte}`

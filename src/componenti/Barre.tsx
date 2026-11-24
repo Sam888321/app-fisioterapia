@@ -36,7 +36,8 @@ export function Barre({ barre, minimo, aTempo, vista, oggi, creatoIl, onScegli }
             <Pressable key={b.data} style={s.colonna} disabled={b.data > oggi} onPress={() => onScegli(b.data)} accessibilityLabel={`Giorno ${b.data}`}>
               {attivo && b.interrotto > 0 && <View style={[s.pezzo, { height: h(b.interrotto), backgroundColor: colori.arancione }]} />}
               {attivo && b.completato > 0 && <View style={[s.pezzo, { height: h(b.completato), backgroundColor: colori.accento }]} />}
-              {attivo && b.completato + b.interrotto === 0 && <View style={[s.pezzo, s.vuota]} />}
+              {attivo && !b.pausa && b.completato + b.interrotto === 0 && <View style={[s.pezzo, s.vuota]} />}
+              {attivo && b.pausa && b.completato + b.interrotto === 0 && <View style={[s.pezzo, s.pausa]} />}
             </Pressable>
           );
         })}
@@ -61,6 +62,7 @@ const s = StyleSheet.create({
   colonna: { flex: 1, height: '100%', justifyContent: 'flex-end' },
   pezzo: { width: '100%', borderTopLeftRadius: 4, borderTopRightRadius: 4 },
   vuota: { height: 2, backgroundColor: colori.bordo },
+  pausa: { height: 6, backgroundColor: colori.grigio },
   // Su Android il tratteggio funziona solo con il bordo su tutti i lati: una View alta 0 con bordo pieno.
   minimo: { position: 'absolute', left: 0, right: 0, height: 0, borderWidth: 1, borderStyle: 'dashed', borderColor: colori.tenue },
   etichettaMinimo: { position: 'absolute', right: 0, fontSize: 11, color: colori.tenue },

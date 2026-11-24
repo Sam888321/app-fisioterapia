@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { caricaEsercizi, SessioneAttiva } from '../archivio';
 import { sottotitolo } from '../formato';
 import { sistemaAttiva } from '../sessione';
+import { giornoLocale, inPausa } from '../storico';
 import { Esercizio } from '../tipi';
 import { colori, ImmagineEsercizio } from '../ui';
 
@@ -31,6 +32,25 @@ export default function Home() {
 
   const inCorso = attiva && esercizi.find((e) => e.id === attiva.esercizioId);
   const apriTimer = (id: string) => router.push({ pathname: '/timer/[id]', params: { id } });
+  const oggi = giornoLocale(new Date());
+  const attivi = esercizi.filter((e) => !inPausa(e, oggi));
+  const inPausaOggi = esercizi.filter((e) => inPausa(e, oggi));
+
+  const card = (item: Esercizio, pausa = false) => (
+    <Pressable key={item.id} style={({ pressed }) => [s.card, pausa && s.cardPausa, pressed && { opacity: 0.7 }]} onPress={() => apriTimer(item.id)}>
+      <ImmagineEsercizio immagine={item.immagine} size={96} />
+      <Text style={s.nome} numberOfLines={2}>{item.nome}</Text>
+      <Text style={s.sotto}>{pausa ? 'In pausa' : sottotitolo(item.ripetizioni, item.tenutaSecondi, item.riposoSecondi)}</Text>
+      <Pressable
+        style={s.modifica}
+        onPress={() => router.push({ pathname: '/esercizio/[id]', params: { id: item.id } })}
+        hitSlop={10}
+        accessibilityLabel={`Modifica ${item.nome}`}
+      >
+        <MaterialCommunityIcons name="pencil" size={22} color={colori.tenue} />
+      </Pressable>
+    </Pressable>
+  );
 
   return (
     <View style={s.schermo}>
@@ -54,27 +74,26 @@ export default function Home() {
         </Pressable>
       )}
       <FlatList
-        data={esercizi}
+        data={attivi}
         keyExtractor={(e) => e.id}
         numColumns={2}
         columnWrapperStyle={{ gap: 12 }}
         contentContainerStyle={{ padding: 16, gap: 12, paddingBottom: insets.bottom + 110 }}
-        ListEmptyComponent={<Text style={s.vuoto}>Nessun esercizio. Aggiungine uno con +</Text>}
-        renderItem={({ item }) => (
-          <Pressable style={({ pressed }) => [s.card, pressed && { opacity: 0.7 }]} onPress={() => apriTimer(item.id)}>
-            <ImmagineEsercizio immagine={item.immagine} size={96} />
-            <Text style={s.nome} numberOfLines={2}>{item.nome}</Text>
-            <Text style={s.sotto}>{sottotitolo(item.ripetizioni, item.tenutaSecondi, item.riposoSecondi)}</Text>
-            <Pressable
-              style={s.modifica}
-              onPress={() => router.push({ pathname: '/esercizio/[id]', params: { id: item.id } })}
-              hitSlop={10}
-              accessibilityLabel={`Modifica ${item.nome}`}
-            >
-              <MaterialCommunityIcons name="pencil" size={22} color={colori.tenue} />
-            </Pressable>
-          </Pressable>
-        )}
+        ListEmptyComponent={
+          <Text style={s.vuoto}>{inPausaOggi.length ? 'Tutti gli esercizi sono in pausa' : 'Nessun esercizio. Aggiungine uno con +'}</Text>
+        }
+        renderItem={({ item }) => card(item)}
+        ListFooterComponent={
+          inPausaOggi.length ? (
+            <View>
+              <Text style={s.sezione}>In pausa</Text>
+              {/* a coppie, come le righe della lista sopra */}
+              {Array.from({ length: Math.ceil(inPausaOggi.length / 2) }, (_, i) => (
+                <View key={i} style={s.riga}>{inPausaOggi.slice(i * 2, i * 2 + 2).map((e) => card(e, true))}</View>
+              ))}
+            </View>
+          ) : undefined
+        }
       />
       <Pressable
         style={[s.fab, { bottom: insets.bottom + 20 }]}
@@ -97,5 +116,8 @@ const s = StyleSheet.create({
   sotto: { fontSize: 15, color: colori.tenue, marginTop: 4 },
   modifica: { position: 'absolute', top: 10, right: 10, padding: 4 },
   vuoto: { textAlign: 'center', color: colori.tenue, fontSize: 16, marginTop: 40 },
+  sezione: { fontSize: 17, fontWeight: '700', color: colori.tenue, marginTop: 12, marginBottom: 12 },
+  riga: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  cardPausa: { opacity: 0.5 },
   fab: { position: 'absolute', right: 20, width: 64, height: 64, borderRadius: 32, backgroundColor: colori.primario, alignItems: 'center', justifyContent: 'center', elevation: 4 },
 });
