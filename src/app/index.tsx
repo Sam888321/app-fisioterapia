@@ -1,28 +1,53 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import { router, Stack, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { caricaEsercizi, SessioneAttiva } from '../archivio';
+import { aggiornaSessione, caricaEsercizi, SessioneAttiva } from '../archivio';
+import { SceltaDolore } from '../componenti/Dolore';
 import { sottotitolo } from '../formato';
 import { sistemaAttiva } from '../sessione';
 import { giornoLocale, inPausa } from '../storico';
-import { Esercizio } from '../tipi';
+import { Dolore, Esercizio } from '../tipi';
 import { colori, ImmagineEsercizio } from '../ui';
 
 export default function Home() {
   const [esercizi, setEsercizi] = useState<Esercizio[]>([]);
   const [attiva, setAttiva] = useState<SessioneAttiva | null>(null);
   const insets = useSafeAreaInsets();
+  // Esercizio finito mentre eri fuori (es. tutore ad app chiusa): la Home chiede il dolore.
+  // Solo se è in primo piano: con il Timer aperto sopra, la domanda la fa il Timer.
+  const [chiedi, setChiedi] = useState<{ id: string; nome: string } | null>(null);
+  const [dolore, setDolore] = useState<Dolore | undefined>(undefined);
+  const inPrimoPiano = useRef(false);
 
   const ricarica = useCallback(() => {
     caricaEsercizi().then(async (e) => {
       setEsercizi(e);
-      setAttiva(await sistemaAttiva(e, Date.now()));
+      const { attiva: a, chiusa } = await sistemaAttiva(e, Date.now());
+      setAttiva(a);
+      if (chiusa && inPrimoPiano.current) {
+        setDolore(undefined);
+        setChiedi(chiusa);
+      }
     });
   }, []);
-  useFocusEffect(ricarica);
+  useFocusEffect(
+    useCallback(() => {
+      inPrimoPiano.current = true;
+      ricarica();
+      return () => {
+        inPrimoPiano.current = false;
+      };
+    }, [ricarica]),
+  );
+
+  async function scegliDolore(d: Dolore) {
+    setDolore(d);
+    if (chiedi) await aggiornaSessione(chiedi.id, { dolore: d });
+    setChiedi(null);
+  }
 
   // Esercizio finito mentre l'app è aperta su un'altra schermata: chiude la sessione e toglie il banner.
   useEffect(() => {
@@ -95,6 +120,18 @@ export default function Home() {
           ) : undefined
         }
       />
+      <Modal visible={!!chiedi} transparent animationType="fade" statusBarTranslucent navigationBarTranslucent onRequestClose={() => setChiedi(null)}>
+        <View style={s.velo}>
+          <View style={s.finestra}>
+            <Text style={s.domanda}>{chiedi?.nome} finito</Text>
+            <Text style={s.domandaSotto}>Come va il dito?</Text>
+            <SceltaDolore valore={dolore} onScegli={scegliDolore} />
+            <Pressable onPress={() => setChiedi(null)} hitSlop={10} style={{ marginTop: 16 }}>
+              <Text style={s.salta}>Salta</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
       <Pressable
         style={[s.fab, { bottom: insets.bottom + 20 }]}
         onPress={() => router.push({ pathname: '/esercizio/[id]', params: { id: 'nuovo' } })}
@@ -116,6 +153,11 @@ const s = StyleSheet.create({
   sotto: { fontSize: 15, color: colori.tenue, marginTop: 4 },
   modifica: { position: 'absolute', top: 10, right: 10, padding: 4 },
   vuoto: { textAlign: 'center', color: colori.tenue, fontSize: 16, marginTop: 40 },
+  velo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', padding: 24 },
+  finestra: { backgroundColor: colori.barra, borderRadius: 18, padding: 20, alignItems: 'center' },
+  domanda: { fontSize: 20, fontWeight: '700', color: colori.accento },
+  domandaSotto: { fontSize: 17, color: colori.testo, marginTop: 6 },
+  salta: { fontSize: 16, color: colori.tenue },
   sezione: { fontSize: 17, fontWeight: '700', color: colori.tenue, marginTop: 12, marginBottom: 12 },
   riga: { flexDirection: 'row', gap: 12, marginBottom: 12 },
   cardPausa: { opacity: 0.5 },

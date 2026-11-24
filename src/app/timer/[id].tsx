@@ -52,7 +52,7 @@ export default function Timer() {
   useEffect(() => {
     caricaEsercizi().then(async (tutti) => {
       const e = tutti.find((x) => x.id === id) ?? null;
-      const a = await sistemaAttiva(tutti, Date.now());
+      const { attiva: a } = await sistemaAttiva(tutti, Date.now());
       if (a && a.esercizioId === id) aggiorna(a);
       else if (a) setAltra(tutti.find((x) => x.id === a.esercizioId)?.nome ?? null);
       setEs(e);

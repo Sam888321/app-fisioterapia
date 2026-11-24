@@ -22,41 +22,43 @@ beforeEach(async () => {
 test('attiva scaduta viene registrata una volta e cancellata', async () => {
   const a = attiva(ora - 1, 'scaduta-1');
   await salvaAttiva(a);
-  expect(await sistemaAttiva([tutore], ora)).toBeNull();
+  const r = await sistemaAttiva([tutore], ora);
   expect(await caricaAttiva()).toBeNull();
   const s = await caricaSessioni();
+  expect(r).toEqual({ attiva: null, chiusa: { id: s[0].id, nome: 'Tutore' } }); // la Home chiede il dolore
   expect(s).toHaveLength(1);
   expect(s[0]).toMatchObject({ esercizioId: 'B', nomeEsercizio: 'Tutore', inizio: 'scaduta-1', esito: 'completato', ripetizioniFatte: 1, restanteMs: 0, ripetizioni: 1, tenutaSecondi: 3600 });
   expect(s[0].fine).toBe(new Date(ora - 1).toISOString()); // l'ora reale di fine, non quella di apertura
   expect(annullaNotifica).toHaveBeenCalledWith('n1');
 
-  expect(await concludiSessione(a, tutore, 'completato', ora)).toBeNull(); // secondo tentativo (timer + home)
+  // Secondo tentativo (timer + home): non duplica, ma restituisce lo stesso id (serve per il dolore).
+  expect(await concludiSessione(a, tutore, 'completato', ora)).toBe(s[0].id);
   expect(await caricaSessioni()).toHaveLength(1);
 });
 
 test('attiva in corso resta', async () => {
   const a = attiva(ora + 60_000, 'in-corso');
   await salvaAttiva(a);
-  expect(await sistemaAttiva([tutore], ora)).toEqual(a);
+  expect(await sistemaAttiva([tutore], ora)).toEqual({ attiva: a, chiusa: null });
   expect(await caricaSessioni()).toEqual([]);
 });
 
 test('attiva in pausa resta anche se vecchia', async () => {
   const a: SessioneAttiva = { ...attiva(0, 'pausa'), stato: { fase: 'pausa', ripetizione: 1, restanteMs: 5000, faseSospesa: 'tenuta' } };
   await salvaAttiva(a);
-  expect(await sistemaAttiva([tutore], ora)).toEqual(a);
+  expect(await sistemaAttiva([tutore], ora)).toEqual({ attiva: a, chiusa: null });
 });
 
 test('attiva di un esercizio eliminato viene scartata', async () => {
   await salvaAttiva(attiva(ora + 60_000, 'orfana'));
-  expect(await sistemaAttiva([], ora)).toBeNull();
+  expect(await sistemaAttiva([], ora)).toEqual({ attiva: null, chiusa: null });
   expect(await caricaAttiva()).toBeNull();
   expect(await caricaSessioni()).toEqual([]);
   expect(annullaNotifica).toHaveBeenCalledWith('n1');
 });
 
 test('nessuna attiva', async () => {
-  expect(await sistemaAttiva([tutore], ora)).toBeNull();
+  expect(await sistemaAttiva([tutore], ora)).toEqual({ attiva: null, chiusa: null });
 });
 
 test('i riposi allungano la sessione: non va chiusa prima del tempo', async () => {
@@ -64,7 +66,7 @@ test('i riposi allungano la sessione: non va chiusa prima del tempo', async () =
   // tenuta 1 finita ora: restano riposo, tenuta 2, riposo, tenuta 3 = 30 s
   const a: SessioneAttiva = { esercizioId: 'B', inizio: 'con-riposo', stato: { fase: 'tenuta', ripetizione: 1, fineFase: ora }, notificaId: null };
   await salvaAttiva(a);
-  expect(await sistemaAttiva([es], ora + 15_000)).toEqual(a);
+  expect(await sistemaAttiva([es], ora + 15_000)).toEqual({ attiva: a, chiusa: null });
 });
 
 describe('nuovaSessione', () => {

@@ -25,13 +25,15 @@ export function nuovaSessione(a: SessioneAttiva, es: Esercizio, esito: 'completa
   };
 }
 
-// Timer e Home possono provare a chiudere la stessa sessione: si registra una volta sola (null la seconda).
-const giaRegistrate = new Set<string>();
+// Timer e Home possono provare a chiudere la stessa sessione (all'ultimo secondo arriva anche la notifica):
+// si registra una volta sola, ma entrambi ricevono l'id, così la domanda sul dolore compare sempre.
+const giaRegistrate = new Map<string, string>(); // inizio → id
 
-export async function concludiSessione(a: SessioneAttiva, es: Esercizio, esito: 'completato' | 'interrotto', ora: number): Promise<string | null> {
-  if (giaRegistrate.has(a.inizio)) return null;
-  giaRegistrate.add(a.inizio);
+export async function concludiSessione(a: SessioneAttiva, es: Esercizio, esito: 'completato' | 'interrotto', ora: number): Promise<string> {
+  const gia = giaRegistrate.get(a.inizio);
+  if (gia) return gia;
   const id = nuovoId();
+  giaRegistrate.set(a.inizio, id);
   await annullaNotifica(a.notificaId);
   await aggiungiSessione(nuovaSessione(a, es, esito, ora, id));
   await salvaAttiva(null);
@@ -44,18 +46,21 @@ export async function scartaSessione(a: SessioneAttiva): Promise<void> {
   await salvaAttiva(null);
 }
 
-// All'apertura: chiude la sessione finita mentre l'app era chiusa (es. tutore). Restituisce quella ancora valida.
-export async function sistemaAttiva(esercizi: Esercizio[], ora: number): Promise<SessioneAttiva | null> {
+// All'apertura: chiude la sessione finita mentre l'app era chiusa (es. tutore).
+// Restituisce quella ancora valida e, se ne ha chiusa una, quale (la Home chiede il dolore).
+export async function sistemaAttiva(
+  esercizi: Esercizio[],
+  ora: number,
+): Promise<{ attiva: SessioneAttiva | null; chiusa: { id: string; nome: string } | null }> {
   const a = await caricaAttiva();
-  if (!a) return null;
+  if (!a) return { attiva: null, chiusa: null };
   const es = esercizi.find((e) => e.id === a.esercizioId);
   if (!es) {
     await scartaSessione(a);
-    return null;
+    return { attiva: null, chiusa: null };
   }
   if (avanza(a.stato, es.ripetizioni, es.tenutaSecondi * 1000, ora, (es.riposoSecondi ?? 0) * 1000).stato.fase === 'finito') {
-    await concludiSessione(a, es, 'completato', ora);
-    return null;
+    return { attiva: null, chiusa: { id: await concludiSessione(a, es, 'completato', ora), nome: es.nome } };
   }
-  return a;
+  return { attiva: a, chiusa: null };
 }
