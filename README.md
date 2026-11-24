@@ -71,3 +71,7 @@ __tests__/        test jest della logica pura
 ```
 
 Le parti con logica (`timer`, `storico`, `andamento`, `riepilogo`, `backup`, `sessione`) sono funzioni pure coperte da test. Le schermate si limitano a collegarle.
+
+## Licenza
+
+[MIT](LICENSE): puoi usarla, modificarla e farne un fork liberamente, mantenendo la nota di copyright.
