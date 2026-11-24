@@ -51,7 +51,8 @@ export function Calendario({ anno, mese, colori: perGiorno, selezionato, oggi, o
           const scelto = data === selezionato;
           return (
             <Pressable key={data} style={s.cella} disabled={futuro} onPress={() => onScegli(data)} accessibilityLabel={`Giorno ${Number(data.slice(8))}`}>
-              <View style={[s.giorno, scelto && s.scelto]}>
+              {/* key: su Android l'arrotondamento si perde se la stessa View cambia colore; ricrearla lo riapplica */}
+              <View key={`${c}-${scelto}`} style={[s.giorno, scelto && s.scelto]}>
                 <Text style={[s.numero, futuro && { color: colori.bordo }, data === oggi && { color: colori.accento, fontWeight: '800' }]}>
                   {Number(data.slice(8))}
                 </Text>
