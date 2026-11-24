@@ -14,3 +14,12 @@ export function sottotitolo(ripetizioni: number, tenutaSecondi: number, riposoSe
   const tenuta = tenutaSecondi >= 60 && tenutaSecondi % 60 === 0 ? `${tenutaSecondi / 60} min` : `${tenutaSecondi} s`;
   return `${ripetizioni} × ${tenuta}` + (riposoSecondi > 0 ? ` · riposo ${riposoSecondi} s` : '');
 }
+
+// Durata leggibile con unità: "2 s", "5 min", "2h 55m".
+export function formatDurata(ms: number): string {
+  if (ms < 60_000) return `${Math.ceil(ms / 1000)} s`;
+  const min = Math.round(ms / 60_000);
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  return min % 60 ? `${h}h ${min % 60}m` : `${h}h`;
+}

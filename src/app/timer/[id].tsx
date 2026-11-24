@@ -3,14 +3,16 @@ import { useKeepAwake } from 'expo-keep-awake';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, AppState, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { caricaAnticipo, caricaEsercizi, salvaAttiva, SessioneAttiva } from '../../archivio';
-import { formatTempo, sottotitolo } from '../../formato';
+import { aggiornaSessione, caricaAnticipo, caricaEsercizi, salvaAttiva, SessioneAttiva } from '../../archivio';
+import { SceltaDolore } from '../../componenti/Dolore';
+import { formatDurata, formatTempo, sottotitolo } from '../../formato';
 import { esclusivo } from '../../esclusivo';
 import { annullaNotifica, chiediPermesso, impostaTimerAperto, programmaFine } from '../../notifiche';
-import { concludiSessione, scartaSessione, sistemaAttiva } from '../../sessione';
+import { concludiSessione, nuovaSessione, scartaSessione, sistemaAttiva } from '../../sessione';
+import { normalizza, ripetizioneRaggiunta } from '../../storico';
 import { precaricaSuoni, suona } from '../../suoni';
 import { avanza, avvia, Evento, fineEsercizio, pausa, restanteMs, riprendi, StatoTimer } from '../../timer';
-import { Esercizio } from '../../tipi';
+import { Dolore, Esercizio, Sessione } from '../../tipi';
 import { colori, ImmagineEsercizio } from '../../ui';
 
 function TieniAcceso() {
@@ -25,6 +27,9 @@ export default function Timer() {
   const [altra, setAltra] = useState<string | null>(null); // nome di un altro esercizio già in corso
   const [senzaNotifica, setSenzaNotifica] = useState(false);
   const [anteprima, setAnteprima] = useState(false);
+  const [idChiusa, setIdChiusa] = useState<string | null>(null); // sessione appena registrata: per il dolore
+  const [terminata, setTerminata] = useState<Sessione | null>(null); // Termina e salva: riepilogo a schermo
+  const [dolore, setDolore] = useState<Dolore | undefined>(undefined);
   const insets = useSafeAreaInsets();
   const [ora, setOra] = useState(() => Date.now());
   const attRef = useRef<SessioneAttiva | null>(null);
@@ -74,7 +79,7 @@ export default function Timer() {
         if ('fineFase' in a.stato) beep(eventi, a.stato.fineFase); // se l'anticipo non è partito (app in background)
         const n = { ...a, stato };
         aggiorna(n);
-        if (stato.fase === 'finito') concludiSessione(a, es, 'completato', Date.now());
+        if (stato.fase === 'finito') concludiSessione(a, es, 'completato', Date.now()).then(setIdChiusa);
         else salvaAttiva(n);
       }
       setOra(Date.now());
@@ -146,11 +151,28 @@ export default function Timer() {
       await salvaAttiva(n);
     });
 
+  // Dalla pausa: registra quanto fatto come sessione interrotta.
+  const termina = () =>
+    esclusivo(occupato, async () => {
+      const a = attRef.current;
+      if (!a || !es || a.stato.fase !== 'pausa') return;
+      const adesso = Date.now();
+      const idS = await concludiSessione(a, es, 'interrotto', adesso);
+      setTerminata(nuovaSessione(a, es, 'interrotto', adesso, idS ?? ''));
+      setIdChiusa(idS);
+      aggiorna(null);
+    });
+
+  function scegliDolore(d: Dolore) {
+    setDolore(d);
+    if (idChiusa) aggiornaSessione(idChiusa, { dolore: d });
+  }
+
   function annulla() {
-    Alert.alert("Annullare l'esercizio?", undefined, [
+    Alert.alert("Scartare l'esercizio?", 'Non verrà salvato nello storico.', [
       { text: 'No', style: 'cancel' },
       {
-        text: 'Annulla esercizio',
+        text: 'Scarta',
         style: 'destructive',
         onPress: async () => {
           const a = attRef.current;
@@ -175,7 +197,7 @@ export default function Timer() {
           <ImmagineEsercizio immagine={es.immagine} size={stato ? 96 : 140} />
         </Pressable>
 
-        {!stato && (
+        {!stato && !terminata && (
           <>
             <Text style={s.titolo}>{es.nome}</Text>
             <Text style={s.sotto}>{sottotitolo(es.ripetizioni, es.tenutaSecondi, es.riposoSecondi)}</Text>
@@ -215,6 +237,21 @@ export default function Timer() {
             <Text style={s.sotto}>{sottotitolo(es.ripetizioni, es.tenutaSecondi, es.riposoSecondi)} completato</Text>
           </>
         )}
+        {terminata && (
+          <>
+            <Text style={[s.fatto, { color: colori.arancione }]}>Terminato</Text>
+            <Text style={s.sotto}>
+              {`${ripetizioneRaggiunta(normalizza(terminata, [es]))}/${es.ripetizioni}`}
+              {(terminata.restanteMs ?? 0) > 0 && ` · mancavano ${formatDurata(terminata.restanteMs!)}`}
+            </Text>
+          </>
+        )}
+        {(stato?.fase === 'finito' || terminata) && idChiusa && (
+          <>
+            <Text style={s.domanda}>Come va il dito?</Text>
+            <SceltaDolore valore={dolore} onScegli={scegliDolore} />
+          </>
+        )}
         {senzaNotifica && stato && stato.fase !== 'finito' && (
           <Text style={s.avviso}>Senza permesso niente notifica ad app chiusa</Text>
         )}
@@ -230,6 +267,7 @@ export default function Timer() {
 
       <View style={[s.comandi, { paddingBottom: insets.bottom + 20 }]}>
         {!stato &&
+          !terminata &&
           (altra ? (
             <Text style={s.avviso}>{`C'è già un esercizio in corso: ${altra}. Finiscilo o annullalo prima.`}</Text>
           ) : (
@@ -245,10 +283,13 @@ export default function Timer() {
           <>
             <Grande testo="Continua" onPress={() => riparte(false)} />
             <Grande testo="Ricomincia ripetizione" secondario onPress={() => riparte(true)} />
-            <Grande testo="Annulla" tenue onPress={annulla} />
+            <View style={s.riga}>
+              <Grande testo="Termina e salva" secondario onPress={termina} />
+              <Grande testo="Annulla" tenue onPress={annulla} />
+            </View>
           </>
         )}
-        {stato?.fase === 'finito' && <Grande testo="Torna alla home" onPress={() => router.back()} />}
+        {(stato?.fase === 'finito' || terminata) && <Grande testo="Torna alla home" onPress={() => router.back()} />}
       </View>
     </View>
   );
@@ -258,7 +299,7 @@ function Grande({ testo, onPress, secondario, tenue }: { testo: string; onPress:
   const sfondo = tenue ? 'transparent' : secondario ? colori.primarioChiaro : colori.primario;
   const colore = tenue ? colori.rosso : secondario ? colori.accento : '#fff';
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.grande, { backgroundColor: sfondo, opacity: pressed ? 0.7 : 1 }]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [s.grande, { flexGrow: 1, backgroundColor: sfondo, opacity: pressed ? 0.7 : 1 }]}>
       <Text style={[s.grandeTesto, { color: colore }]}>{testo}</Text>
     </Pressable>
   );
@@ -276,6 +317,8 @@ const s = StyleSheet.create({
   comandi: { padding: 20, gap: 12, paddingBottom: 36 },
   grande: { borderRadius: 16, paddingVertical: 20, alignItems: 'center' },
   grandeTesto: { fontSize: 22, fontWeight: '700' },
+  riga: { flexDirection: 'row', gap: 12 },
+  domanda: { fontSize: 20, fontWeight: '600', color: colori.testo, marginTop: 28 },
   anteprima: { flex: 1, backgroundColor: 'rgba(0,0,0,0.92)', justifyContent: 'center', padding: 16 },
   foto: { width: '100%', height: '100%' },
 });

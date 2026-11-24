@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Image, View } from 'react-native';
-import { Immagine } from './tipi';
+import { Dolore, Immagine } from './tipi';
 
 // Tema scuro: fondo blu notte, verde scuro per i pulsanti pieni, verde chiaro per testi/icone in evidenza.
 export const colori = {
@@ -13,8 +13,17 @@ export const colori = {
   testo: '#E6EDF3',
   tenue: '#8B9BAE',
   rosso: '#F06A6A',
+  arancione: '#F0A04B',
+  giallo: '#E3C35A',
   bordo: '#253246',
 };
+
+export const DOLORI: { valore: Dolore; nome: string; icona: keyof typeof MaterialCommunityIcons.glyphMap; colore: string }[] = [
+  { valore: 0, nome: 'nessuno', icona: 'emoticon-happy-outline', colore: colori.accento },
+  { valore: 1, nome: 'lieve', icona: 'emoticon-neutral-outline', colore: colori.giallo },
+  { valore: 2, nome: 'medio', icona: 'emoticon-sad-outline', colore: colori.arancione },
+  { valore: 3, nome: 'forte', icona: 'emoticon-cry-outline', colore: colori.rosso },
+];
 
 export function ImmagineEsercizio({ immagine, size }: { immagine: Immagine; size: number }) {
   if (immagine.tipo === 'foto') {

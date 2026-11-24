@@ -1,4 +1,4 @@
-import { formatTempo, sottotitolo } from '../src/formato';
+import { formatDurata, formatTempo, sottotitolo } from '../src/formato';
 
 test('formatTempo: secondi per eccesso sotto il minuto', () => {
   expect(formatTempo(4001)).toBe('5');
@@ -22,4 +22,13 @@ test('sottotitolo esercizio', () => {
 test('sottotitolo con riposo', () => {
   expect(sottotitolo(10, 5, 3)).toBe('10 × 5 s · riposo 3 s');
   expect(sottotitolo(10, 5, 0)).toBe('10 × 5 s');
+});
+
+test('formatDurata: durate con unità', () => {
+  expect(formatDurata(2000)).toBe('2 s');
+  expect(formatDurata(1500)).toBe('2 s');
+  expect(formatDurata(300_000)).toBe('5 min');
+  expect(formatDurata(330_000)).toBe('6 min');
+  expect(formatDurata(3_600_000)).toBe('1h');
+  expect(formatDurata(10_500_000)).toBe('2h 55m');
 });
