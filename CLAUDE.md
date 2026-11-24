@@ -2,7 +2,7 @@
 
 App Android personale di Samu (non FOR J): timer programmabile per gli esercizi di fisioterapia del dito (N ripetizioni × T secondi di tenuta), con suoni, notifica di fine ad app chiusa e storico. Leggi anche `AGENTS.md` (regole Expo del template: SDK cambia spesso, consultare i docs versionati).
 
-## Contesto vivo (ultimo aggiornamento 2026-11-20)
+## Contesto vivo (ultimo aggiornamento 2026-11-24)
 
 **Repo:** git locale, nessun remote. Si lavora su `main`. Commit senza alcuna attribuzione a Claude (niente `Co-Authored-By`).
 
@@ -10,11 +10,16 @@ App Android personale di Samu (non FOR J): timer programmabile per gli esercizi 
 
 **Struttura:**
 ```
-src/app/            schermate (expo-router): _layout, index (Home), esercizio/[id], timer/[id], storico
-src/tipi.ts         tipi di dominio + validaEsercizio
+src/app/            schermate (expo-router): _layout, index (Home), esercizio/[id], timer/[id], storico, andamento, impostazioni
+src/componenti/     Calendario, Barre, Striscia (vista Giorno), Dolore (4 faccine)
+src/tipi.ts         tipi di dominio + validaEsercizio (Sessione con copia dei parametri, fine, restanteMs, obiettivo, dolore)
 src/timer.ts        macchina a stati del timer (pura, basata su timestamp)
-src/storico.ts      aggregazione storico per giorno (pura)
-src/archivio.ts     AsyncStorage: esercizi, sessioni, sessione attiva, seed, copia foto
+src/sessione.ts     chiusura sessione (completata/interrotta, una volta sola), scarto (Annulla), sistemaAttiva
+src/storico.ts      pura: normalizza (sessioni vecchie), indice per giorno, riquadri, colori giorno, serie
+src/andamento.ts    pura: periodi e dati di Barre/Striscia
+src/riepilogo.ts    pura: testo da condividere
+src/backup.ts       pura: crea/valida il file di backup
+src/archivio.ts     AsyncStorage: esercizi, sessioni, sessione attiva, anticipo beep, seed, copia foto, sostituisciDati
 src/notifiche.ts    permesso, canale, notifica programmata di fine esercizio
 src/suoni.ts        suoni cambio/fine
 src/icone.ts        icone predefinite (MaterialCommunityIcons)
@@ -48,4 +53,6 @@ Gotcha:
 - Beep in anticipo sullo scatto (`anticipoBeep` in AsyncStorage, default 110 ms, regolabile da Impostazioni): l'audio Android arriva in ritardo. In Expo Go serviva ~500 ms (modalità sviluppo); nell'APK sul Samsung di Samu 110 ms è perfetto.
 - Il timer si calcola da timestamp (`src/timer.ts`); la sessione attiva è salvata, e Home/Timer chiudono quella scaduta ad app chiusa (`src/sessione.ts`).
 
-**Stato (2026-11-20):** v1 completa, 58 test, riposo configurabile tra le ripetizioni (fase `riposo` in `src/timer.ts`, campo `riposoSecondi`, assente = 0), revisione finale fatta e correzioni applicate, APK 1.1.2 generato (tema scuro, griglia, insets, icona, tastiera, anteprima foto, riposo, Impostazioni con anticipo beep). Collaudato sul telefono il 2026-11-20: notifica del tutore (1 ora, app chiusa, schermo spento) arrivata. Collaudo completo: + sopra la barra gesti ok, anticipo beep 110 ms perfetto nell'APK. Rimandati (minori): avviso "senza notifica" non ricompare rientrando nel timer; se la scrittura dello storico fallisce non si ritenta.
+**Stato (2026-11-24):** APK 1.2.0 generato: Termina e salva / Annulla che scarta, dolore a 4 livelli (modificabile dalla vista Giorno), Storico con calendario colorato + serie + riquadri, Andamento (Giorno/Settimana/Mese), riepilogo condivisibile, backup su file (senza foto), selettore mese/anno. 89 test. Revisione finale fatta (opus): corretti indice per giorno, minimo giornaliero salvato nella sessione, niente import con esercizio in corso. Rimandati (minori, dalla revisione): domanda dolore assente se la Home chiude la sessione prima del Timer; striscia Giorno sfasata di 1h nei giorni del cambio ora; Termina e salva dopo una pausa lunga registra la fine al momento del tocco; validazione backup incompleta per file modificati a mano; riquadro di un esercizio eliminato apre l'Andamento del primo esercizio. Prova utile su BlueStacks: importare un backup di prova (Impostazioni → Importa) per avere grafici pieni in Expo Go.
+
+**Stato precedente (2026-11-20):** v1 completa, 58 test, riposo configurabile tra le ripetizioni (fase `riposo` in `src/timer.ts`, campo `riposoSecondi`, assente = 0), revisione finale fatta e correzioni applicate, APK 1.1.2 generato (tema scuro, griglia, insets, icona, tastiera, anteprima foto, riposo, Impostazioni con anticipo beep). Collaudato sul telefono il 2026-11-20: notifica del tutore (1 ora, app chiusa, schermo spento) arrivata. Collaudo completo: + sopra la barra gesti ok, anticipo beep 110 ms perfetto nell'APK. Rimandati (minori): avviso "senza notifica" non ricompare rientrando nel timer; se la scrittura dello storico fallisce non si ritenta.
